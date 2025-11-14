@@ -1,0 +1,80 @@
+import mongoose, { Schema, Model } from 'mongoose';
+import {
+  IMenuItem,
+  ICustomization,
+  ICustomizationOption,
+  MenuCategory,
+  MenuMainCategory,
+} from '@/interfaces';
+
+const customizationOptionSchema = new Schema<ICustomizationOption>(
+  {
+    name: { type: String, required: true },
+    price: { type: Number, required: true, min: 0 },
+    available: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
+
+const customizationSchema = new Schema<ICustomization>(
+  {
+    name: { type: String, required: true },
+    required: { type: Boolean, default: false },
+    options: { type: [customizationOptionSchema], default: [] },
+  },
+  { _id: false }
+);
+
+const menuItemSchema = new Schema<IMenuItem>(
+  {
+    name: { type: String, required: true, trim: true },
+    description: { type: String, required: true },
+    mainCategory: {
+      type: String,
+      enum: ['drinks', 'food'] as MenuMainCategory[],
+      required: true,
+    },
+    category: {
+      type: String,
+      enum: [
+        'beer-local',
+        'beer-imported',
+        'beer-craft',
+        'wine',
+        'soft-drinks',
+        'starters',
+        'main-courses',
+        'desserts',
+      ] as MenuCategory[],
+      required: true,
+    },
+    price: { type: Number, required: true, min: 0 },
+    images: { type: [String], default: [] },
+    customizations: { type: [customizationSchema], default: [] },
+    isAvailable: { type: Boolean, default: true },
+    preparationTime: { type: Number, required: true, min: 0 },
+    tags: { type: [String], default: [] },
+    allergens: { type: [String], default: [] },
+    nutritionalInfo: {
+      calories: { type: Number, min: 0 },
+      protein: { type: Number, min: 0 },
+      carbs: { type: Number, min: 0 },
+      fat: { type: Number, min: 0 },
+    },
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
+
+menuItemSchema.index({ name: 'text', description: 'text', tags: 'text' });
+menuItemSchema.index({ mainCategory: 1, category: 1 });
+menuItemSchema.index({ isAvailable: 1, mainCategory: 1 });
+
+const MenuItemModel: Model<IMenuItem> =
+  mongoose.models.MenuItem ||
+  mongoose.model<IMenuItem>('MenuItem', menuItemSchema);
+
+export default MenuItemModel;

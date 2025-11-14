@@ -1,0 +1,6 @@
+🚧 TODOs for Phase 2.2
+⏳ Implement actual QR scanner (camera access)
+⏳ Google Maps API for delivery radius validation
+⏳ Server Actions to save order type to session
+⏳ Restaurant operating hours validation
+⏳ Distance-based delivery fee calculation

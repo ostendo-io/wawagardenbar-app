@@ -1,0 +1,284 @@
+'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
+import { MenuItemWithStock } from '@/services/category-service';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Minus, Plus, AlertCircle, Clock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useCartStore } from '@/stores/cart-store';
+import { validateCartItem } from '@/app/actions/cart/cart-actions';
+
+interface MenuItemDetailModalProps {
+  item: MenuItemWithStock;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetailModalProps) {
+  const [quantity, setQuantity] = useState(1);
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const { toast } = useToast();
+  const { addItem, openCart } = useCartStore();
+
+  const isOutOfStock = item.stockStatus === 'out-of-stock';
+  const isLowStock = item.stockStatus === 'low-stock';
+
+  function formatPrice(price: number): string {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0,
+    }).format(price);
+  }
+
+  function handleQuantityChange(delta: number) {
+    const newQuantity = quantity + delta;
+    if (newQuantity >= 1 && newQuantity <= 99) {
+      setQuantity(newQuantity);
+    }
+  }
+
+  async function handleAddToCart() {
+    setIsAdding(true);
+    
+    try {
+      // Validate item availability
+      const validation = await validateCartItem(item._id.toString(), quantity);
+      
+      if (!validation.success) {
+        toast({
+          title: 'Cannot Add to Cart',
+          description: validation.message,
+          variant: 'destructive',
+        });
+        setIsAdding(false);
+        return;
+      }
+
+      // Add to cart
+      addItem({
+        id: item._id.toString(),
+        name: item.name,
+        price: item.price,
+        quantity,
+        image: item.images?.[0],
+        category: item.category,
+        specialInstructions: specialInstructions || undefined,
+        preparationTime: item.preparationTime,
+      });
+
+      toast({
+        title: 'Added to Cart',
+        description: `${quantity}x ${item.name} added to your cart`,
+      });
+
+      // Open cart sidebar
+      openCart();
+      
+      // Close modal and reset
+      onOpenChange(false);
+      setQuantity(1);
+      setSpecialInstructions('');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add item to cart. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAdding(false);
+    }
+  }
+
+  function handleClose() {
+    onOpenChange(false);
+    setQuantity(1);
+    setSpecialInstructions('');
+  }
+
+  const totalPrice = item.price * quantity;
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{item.name}</DialogTitle>
+          <DialogDescription>{item.category}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Image Gallery */}
+          {item.images && item.images.length > 0 && (
+            <div className="relative aspect-video overflow-hidden rounded-lg">
+              <Image
+                src={item.images[0]}
+                alt={item.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+                priority
+              />
+            </div>
+          )}
+
+          {/* Stock Status */}
+          {(isOutOfStock || isLowStock) && (
+            <div
+              className={`flex items-center gap-2 rounded-lg border p-3 ${
+                isOutOfStock
+                  ? 'border-destructive/50 bg-destructive/10 text-destructive'
+                  : 'border-yellow-500/50 bg-yellow-50 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-100'
+              }`}
+            >
+              <AlertCircle className="h-5 w-5" />
+              <span className="text-sm font-medium">
+                {isOutOfStock ? 'Out of Stock' : `Low Stock - Only ${item.currentStock} left`}
+              </span>
+            </div>
+          )}
+
+          {/* Description */}
+          <div>
+            <h3 className="mb-2 font-semibold">Description</h3>
+            <p className="text-sm text-muted-foreground">{item.description}</p>
+          </div>
+
+          {/* Nutritional Info */}
+          {item.nutritionalInfo && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="mb-3 font-semibold">Nutritional Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+                  {item.nutritionalInfo.calories && (
+                    <div>
+                      <p className="text-muted-foreground">Calories</p>
+                      <p className="font-medium">{item.nutritionalInfo.calories} kcal</p>
+                    </div>
+                  )}
+                  {item.nutritionalInfo.protein && (
+                    <div>
+                      <p className="text-muted-foreground">Protein</p>
+                      <p className="font-medium">{item.nutritionalInfo.protein}g</p>
+                    </div>
+                  )}
+                  {item.nutritionalInfo.carbs && (
+                    <div>
+                      <p className="text-muted-foreground">Carbs</p>
+                      <p className="font-medium">{item.nutritionalInfo.carbs}g</p>
+                    </div>
+                  )}
+                  {item.nutritionalInfo.fat && (
+                    <div>
+                      <p className="text-muted-foreground">Fat</p>
+                      <p className="font-medium">{item.nutritionalInfo.fat}g</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Allergens */}
+          {item.allergens && item.allergens.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="mb-2 font-semibold">Allergen Information</h3>
+                <div className="flex flex-wrap gap-2">
+                  {item.allergens.map((allergen) => (
+                    <Badge key={allergen} variant="destructive">
+                      {allergen}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Preparation Time */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>Preparation time: {item.preparationTime} minutes</span>
+          </div>
+
+          <Separator />
+
+          {/* Quantity Selector */}
+          <div>
+            <Label htmlFor="quantity" className="mb-2 block">
+              Quantity
+            </Label>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleQuantityChange(-1)}
+                disabled={quantity <= 1}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="w-12 text-center text-lg font-semibold">{quantity}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleQuantityChange(1)}
+                disabled={quantity >= 99 || (isLowStock && quantity >= (item.currentStock || 0))}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Special Instructions */}
+          <div>
+            <Label htmlFor="instructions" className="mb-2 block">
+              Special Instructions (Optional)
+            </Label>
+            <Textarea
+              id="instructions"
+              placeholder="Any dietary requirements or special requests..."
+              value={specialInstructions}
+              onChange={(e) => setSpecialInstructions(e.target.value)}
+              rows={3}
+              maxLength={200}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {specialInstructions.length}/200 characters
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-col gap-2 sm:flex-row">
+          <div className="flex flex-1 items-center justify-between sm:justify-start">
+            <span className="text-sm text-muted-foreground">Total:</span>
+            <span className="ml-2 text-2xl font-bold">{formatPrice(totalPrice)}</span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddToCart} disabled={isOutOfStock || isAdding}>
+              <Plus className="mr-2 h-4 w-4" />
+              {isAdding ? 'Adding...' : 'Add to Cart'}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
