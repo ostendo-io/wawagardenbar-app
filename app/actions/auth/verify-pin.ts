@@ -88,6 +88,7 @@ export async function verifyPinAction(
 
     session.userId = user._id.toString();
     session.email = user.email;
+    session.role = user.role;
     session.isGuest = false;
     session.isLoggedIn = true;
     session.createdAt = Date.now();

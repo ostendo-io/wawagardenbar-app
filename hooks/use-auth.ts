@@ -2,12 +2,14 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { UserRole } from '@/interfaces/user.interface';
 
 interface User {
   id?: string;
   name?: string;
   email?: string;
   emailVerified?: boolean;
+  role?: UserRole;
   totalSpent?: number;
   rewardsEarned?: number;
   orderCount?: number;
@@ -20,6 +22,7 @@ interface SessionData {
   email?: string;
   name?: string;
   emailVerified?: boolean;
+  role?: UserRole;
   totalSpent?: number;
   rewardsEarned?: number;
   orderCount?: number;
@@ -93,6 +96,7 @@ export function useAuth() {
     error,
     isAuthenticated: session?.isLoggedIn ?? false,
     isGuest: session?.isGuest ?? false,
+    role: session?.role || user?.role,
     logout: logoutMutation.mutate,
     refreshSession,
   };

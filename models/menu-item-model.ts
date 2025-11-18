@@ -53,6 +53,7 @@ const menuItemSchema = new Schema<IMenuItem>(
     customizations: { type: [customizationSchema], default: [] },
     isAvailable: { type: Boolean, default: true },
     preparationTime: { type: Number, required: true, min: 0 },
+    servingSize: { type: String },
     tags: { type: [String], default: [] },
     allergens: { type: [String], default: [] },
     nutritionalInfo: {
@@ -60,6 +61,19 @@ const menuItemSchema = new Schema<IMenuItem>(
       protein: { type: Number, min: 0 },
       carbs: { type: Number, min: 0 },
       fat: { type: Number, min: 0 },
+      spiceLevel: { 
+        type: String, 
+        enum: ['none', 'mild', 'medium', 'hot', 'extra-hot'],
+        default: 'none'
+      },
+    },
+    slug: { type: String, unique: true, sparse: true },
+    metaDescription: { type: String },
+    trackInventory: { type: Boolean, default: false },
+    inventoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Inventory',
+      required: false,
     },
   },
   {

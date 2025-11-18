@@ -5,7 +5,7 @@ import { sessionOptions, SessionData, defaultSession } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(_request: NextRequest): Promise<NextResponse> {
   try {
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (session.userId && !session.isGuest) {
       await connectDB();
       const user = await UserModel.findById(session.userId).select(
-        'name email emailVerified totalSpent rewardsEarned orderCount'
+        'name email emailVerified role totalSpent rewardsEarned orderCount'
       );
 
       if (!user) {
@@ -34,6 +34,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
+        role: user.role,
         totalSpent: user.totalSpent,
         rewardsEarned: user.rewardsEarned,
         orderCount: user.orderCount,
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       isLoggedIn: session.isLoggedIn,
       email: session.email,
+      role: session.role,
       isGuest: session.isGuest,
     });
   } catch (error) {

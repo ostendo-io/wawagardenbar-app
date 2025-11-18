@@ -11,8 +11,7 @@ interface GuestCheckoutResult {
 }
 
 export async function guestCheckoutAction(
-  email: string,
-  name?: string
+  email: string
 ): Promise<GuestCheckoutResult> {
   try {
     if (!email || !validateEmail(email)) {

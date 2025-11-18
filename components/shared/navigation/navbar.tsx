@@ -28,7 +28,7 @@ interface NavLink {
   icon?: React.ReactNode;
 }
 
-const navLinks: NavLink[] = [
+const baseNavLinks: NavLink[] = [
   { href: '/', label: 'Home' },
   { href: '/menu', label: 'Menu' },
   { href: '/orders', label: 'Orders' },
@@ -38,7 +38,13 @@ const navLinks: NavLink[] = [
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { isAuthenticated, isGuest, user, logout } = useAuth();
+  const { isAuthenticated, isGuest, user, role, logout } = useAuth();
+
+  // Add Dashboard link for admin and super-admin users
+  const navLinks = [...baseNavLinks];
+  if (role === 'admin' || role === 'super-admin') {
+    navLinks.push({ href: '/dashboard', label: 'Dashboard' });
+  }
 
   function getInitials(name?: string, email?: string): string {
     if (name) {

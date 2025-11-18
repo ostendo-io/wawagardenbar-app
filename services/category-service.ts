@@ -8,6 +8,19 @@ export interface MenuItemWithStock extends IMenuItem {
   currentStock?: number;
 }
 
+/**
+ * Serialize Mongoose document to plain object for Client Components
+ */
+function serializeMenuItem(item: any): any {
+  return {
+    ...item,
+    _id: item._id.toString(),
+    inventoryId: item.inventoryId?.toString(),
+    createdAt: item.createdAt?.toISOString(),
+    updatedAt: item.updatedAt?.toISOString(),
+  };
+}
+
 export class CategoryService {
   /**
    * Get all menu items with stock information
@@ -22,11 +35,11 @@ export class CategoryService {
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
-        return {
+        return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',
           currentStock: inventory?.currentStock,
-        };
+        });
       })
     );
 
@@ -51,11 +64,11 @@ export class CategoryService {
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
-        return {
+        return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',
           currentStock: inventory?.currentStock,
-        };
+        });
       })
     );
 
@@ -78,11 +91,11 @@ export class CategoryService {
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
-        return {
+        return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',
           currentStock: inventory?.currentStock,
-        };
+        });
       })
     );
 
@@ -100,11 +113,11 @@ export class CategoryService {
 
     const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
 
-    return {
+    return serializeMenuItem({
       ...item,
       stockStatus: inventory?.status || 'in-stock',
       currentStock: inventory?.currentStock,
-    } as MenuItemWithStock;
+    }) as MenuItemWithStock;
   }
 
   /**
@@ -147,11 +160,11 @@ export class CategoryService {
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
-        return {
+        return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',
           currentStock: inventory?.currentStock,
-        };
+        });
       })
     );
 

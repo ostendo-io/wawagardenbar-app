@@ -1,5 +1,7 @@
 // Service layer for business logic
-// Example:
-// export * from './user-service';
-// export * from './menu-service';
-// export * from './payment-service';
+export { CategoryService } from './category-service';
+export { OrderService } from './order-service';
+export { PaymentService } from './payment-service';
+export { RewardsService } from './rewards-service';
+export { AuditLogService } from './audit-log-service';
+export { default as InventoryService } from './inventory-service';

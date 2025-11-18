@@ -65,6 +65,10 @@ export interface IOrder {
   discount: number;
   total: number;
   paymentId?: Types.ObjectId;
+  paymentReference?: string;
+  transactionReference?: string;
+  paymentStatus?: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
+  paidAt?: Date;
   deliveryDetails?: IDeliveryDetails;
   pickupDetails?: IPickupDetails;
   dineInDetails?: IDineInDetails;
@@ -78,6 +82,12 @@ export interface IOrder {
   }[];
   rating?: number;
   review?: string;
+  inventoryDeducted: boolean;
+  inventoryDeductedAt?: Date;
+  inventoryDeductedBy?: Types.ObjectId;
+  estimatedCompletionTime?: Date;
+  preparationStartedAt?: Date;
+  kitchenPriority?: 'normal' | 'urgent';
   createdAt: Date;
   updatedAt: Date;
 }

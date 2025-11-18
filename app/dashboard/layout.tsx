@@ -1,0 +1,50 @@
+import { redirect } from 'next/navigation';
+import { requireAdmin } from '@/lib/auth-middleware';
+import { DashboardNav } from '@/components/features/admin/dashboard-nav';
+
+export const metadata = {
+  title: 'Admin Dashboard | Wawa Garden Bar',
+  description: 'Manage your restaurant operations',
+};
+
+/**
+ * Admin dashboard layout
+ * Requires admin or super-admin role
+ */
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Require admin authentication
+  const session = await requireAdmin();
+
+  if (!session.userId) {
+    redirect('/login');
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <DashboardNav userEmail={session.email} userRole={session.role} />
+
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top Bar */}
+        <header className="flex h-16 items-center border-b bg-card px-6">
+          <div className="flex flex-1 items-center justify-between">
+            <h2 className="text-2xl font-bold">Dashboard</h2>
+            <div className="flex items-center gap-4">
+              {/* Future: Notifications, Quick Actions */}
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto bg-background p-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

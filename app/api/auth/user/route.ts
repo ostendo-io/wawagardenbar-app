@@ -5,7 +5,7 @@ import { sessionOptions, SessionData } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(_request: NextRequest): Promise<NextResponse> {
   try {
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         name: user.name,
         email: user.email,
         emailVerified: user.emailVerified,
+        role: user.role,
         phone: user.phone,
         addresses: user.addresses,
         paymentMethods: user.paymentMethods,

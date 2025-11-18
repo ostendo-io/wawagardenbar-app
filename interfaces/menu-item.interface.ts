@@ -1,5 +1,3 @@
-import { Types } from 'mongoose';
-
 export type MenuCategory =
   | 'beer-local'
   | 'beer-imported'
@@ -25,7 +23,7 @@ export interface ICustomization {
 }
 
 export interface IMenuItem {
-  _id: Types.ObjectId;
+  _id: string;
   name: string;
   description: string;
   mainCategory: MenuMainCategory;
@@ -35,6 +33,7 @@ export interface IMenuItem {
   customizations: ICustomization[];
   isAvailable: boolean;
   preparationTime: number;
+  servingSize?: string;
   tags: string[];
   allergens: string[];
   nutritionalInfo?: {
@@ -42,7 +41,12 @@ export interface IMenuItem {
     protein?: number;
     carbs?: number;
     fat?: number;
+    spiceLevel?: 'none' | 'mild' | 'medium' | 'hot' | 'extra-hot';
   };
-  createdAt: Date;
-  updatedAt: Date;
+  slug?: string;
+  metaDescription?: string;
+  trackInventory: boolean;
+  inventoryId?: string;
+  createdAt: string;
+  updatedAt: string;
 }

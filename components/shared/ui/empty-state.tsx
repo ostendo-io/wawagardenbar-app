@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +9,8 @@ interface EmptyStateProps {
   description: string;
   action?: {
     label: string;
-    onClick: () => void;
+    href?: string;
+    onClick?: () => void;
   };
 }
 
@@ -27,7 +29,15 @@ export function EmptyState({
           {description}
         </p>
         {action && (
-          <Button onClick={action.onClick}>{action.label}</Button>
+          <>
+            {action.href ? (
+              <Link href={action.href}>
+                <Button>{action.label}</Button>
+              </Link>
+            ) : action.onClick ? (
+              <Button onClick={action.onClick}>{action.label}</Button>
+            ) : null}
+          </>
         )}
       </CardContent>
     </Card>

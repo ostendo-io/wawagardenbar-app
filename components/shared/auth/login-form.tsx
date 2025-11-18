@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { sendPinAction, verifyPinAction } from '@/app/actions/auth';
 
 const emailSchema = z.object({
@@ -34,6 +35,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { refreshSession } = useAuth();
 
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
@@ -89,6 +91,9 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           title: 'Success',
           description: result.message,
         });
+        
+        // Refresh session to update auth state
+        refreshSession();
         
         if (onSuccess) {
           onSuccess();

@@ -15,12 +15,15 @@ export interface IPaymentMethod {
   isDefault: boolean;
 }
 
+export type UserRole = 'customer' | 'admin' | 'super-admin';
+
 export interface IUser {
   _id: Types.ObjectId;
   name?: string;
   email: string;
   emailVerified: boolean;
   phone?: string;
+  role: UserRole;
   verificationPin?: string;
   pinExpiresAt?: Date;
   sessionToken?: string;
@@ -28,6 +31,7 @@ export interface IUser {
   paymentMethods: IPaymentMethod[];
   totalSpent: number;
   rewardsEarned: number;
+  loyaltyPoints: number;
   orderCount: number;
   isGuest: boolean;
   lastLoginAt?: Date;

@@ -326,3 +326,392 @@ export async function sendWelcomeEmail(
     text,
   });
 }
+
+/**
+ * Send order confirmation email
+ */
+export async function sendOrderConfirmationEmail(
+  email: string,
+  orderData: {
+    orderNumber: string;
+    orderType: string;
+    items: { name: string; quantity: number; price: number }[];
+    total: number;
+    estimatedWaitTime: number;
+  }
+): Promise<void> {
+  const itemsList = orderData.items
+    .map(
+      (item) =>
+        `<li>${item.quantity}x ${item.name} - ₦${item.price.toLocaleString()}</li>`
+    )
+    .join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Order Confirmation</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .container { background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header h1 { color: #1a4d2e; margin: 0; }
+          .order-number { background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+          .order-number h2 { color: #1a4d2e; margin: 0; font-size: 32px; }
+          .items { margin: 20px 0; }
+          .items ul { list-style: none; padding: 0; }
+          .items li { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+          .total { background: #1a4d2e; color: #fff; padding: 15px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; }
+          .info { background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Order Confirmed! 🎉</h1>
+            <p>Thank you for your order</p>
+          </div>
+          
+          <div class="order-number">
+            <p style="margin: 0; font-size: 14px; color: #6b7280;">Order Number</p>
+            <h2>#${orderData.orderNumber}</h2>
+          </div>
+          
+          <div class="info">
+            <p><strong>Order Type:</strong> ${orderData.orderType}</p>
+            <p><strong>Estimated Wait Time:</strong> ${orderData.estimatedWaitTime} minutes</p>
+          </div>
+          
+          <div class="items">
+            <h3>Order Items:</h3>
+            <ul>${itemsList}</ul>
+          </div>
+          
+          <div class="total">
+            Total: ₦${orderData.total.toLocaleString()}
+          </div>
+          
+          <p style="text-align: center;">
+            You can track your order status in real-time from your account.
+          </p>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Wawa Garden Bar</p>
+            <p>Need help? Contact us at ${process.env.EMAIL_FROM}</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: `Order Confirmed - #${orderData.orderNumber}`,
+    html,
+  });
+}
+
+/**
+ * Send order status update email
+ */
+export async function sendOrderStatusUpdateEmail(
+  email: string,
+  orderNumber: string,
+  status: string,
+  message: string
+): Promise<void> {
+  const statusEmoji: Record<string, string> = {
+    confirmed: '✅',
+    preparing: '👨‍🍳',
+    ready: '🎉',
+    'out-for-delivery': '🚗',
+    delivered: '✅',
+    completed: '🎊',
+    cancelled: '❌',
+  };
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Order Status Update</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .container { background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .status { text-align: center; padding: 30px; background: #f9fafb; border-radius: 8px; margin: 20px 0; }
+          .status h2 { color: #1a4d2e; margin: 10px 0; font-size: 28px; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1 style="text-align: center; color: #1a4d2e;">Order Status Update</h1>
+          
+          <div class="status">
+            <p style="font-size: 48px; margin: 0;">${statusEmoji[status] || '📦'}</p>
+            <h2>${status.replace('-', ' ').toUpperCase()}</h2>
+            <p style="font-size: 14px; color: #6b7280;">Order #${orderNumber}</p>
+          </div>
+          
+          <p style="text-align: center; font-size: 16px;">${message}</p>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Wawa Garden Bar</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: `Order #${orderNumber} - ${status.replace('-', ' ')}`,
+    html,
+  });
+}
+
+/**
+ * Send order cancellation email
+ */
+export async function sendOrderCancellationEmail(
+  email: string,
+  orderNumber: string,
+  refundAmount: number,
+  reason?: string
+): Promise<void> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Order Cancelled</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .container { background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+          .refund { background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1 style="text-align: center; color: #dc2626;">Order Cancelled</h1>
+          
+          <div class="alert">
+            <p><strong>Order #${orderNumber}</strong> has been cancelled.</p>
+            ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+          </div>
+          
+          ${
+            refundAmount > 0
+              ? `
+          <div class="refund">
+            <p style="margin: 0; font-size: 14px; color: #065f46;">Refund Amount</p>
+            <p style="margin: 10px 0; font-size: 32px; font-weight: bold; color: #10b981;">₦${refundAmount.toLocaleString()}</p>
+            <p style="margin: 0; font-size: 14px; color: #065f46;">Refund will be processed within 5-7 business days</p>
+          </div>
+          `
+              : ''
+          }
+          
+          <p style="text-align: center;">
+            We're sorry to see your order cancelled. If you have any questions, please contact our support team.
+          </p>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Wawa Garden Bar</p>
+            <p>Contact us at ${process.env.EMAIL_FROM}</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: `Order Cancelled - #${orderNumber}`,
+    html,
+  });
+}
+
+/**
+ * Send support ticket confirmation email
+ */
+export async function sendSupportTicketEmail(
+  email: string,
+  ticketData: {
+    ticketNumber: string;
+    category: string;
+    subject: string;
+    message: string;
+  }
+): Promise<void> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Support Ticket Received</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .container { background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .ticket { background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1 style="text-align: center; color: #1a4d2e;">Support Ticket Received</h1>
+          
+          <p>Thank you for contacting us. We've received your support request and will respond as soon as possible.</p>
+          
+          <div class="ticket">
+            <p><strong>Ticket Number:</strong> #${ticketData.ticketNumber}</p>
+            <p><strong>Category:</strong> ${ticketData.category}</p>
+            <p><strong>Subject:</strong> ${ticketData.subject}</p>
+            <p><strong>Message:</strong></p>
+            <p style="background: #fff; padding: 15px; border-radius: 4px;">${ticketData.message}</p>
+          </div>
+          
+          <p style="text-align: center;">
+            Our support team typically responds within 24 hours.
+          </p>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Wawa Garden Bar</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: `Support Ticket #${ticketData.ticketNumber} - ${ticketData.subject}`,
+    html,
+  });
+}
+
+/**
+ * Send low stock alert email to admins
+ */
+export async function sendLowStockAlertEmail(data: {
+  itemName: string;
+  currentStock: number;
+  minimumStock: number;
+  unit: string;
+  suggestedReorder: number;
+  lastRestocked?: Date;
+}): Promise<void> {
+  const adminEmail = process.env.ADMIN_ALERT_EMAIL || process.env.EMAIL_FROM;
+
+  if (!adminEmail) {
+    console.warn('No admin email configured for low stock alerts');
+    return;
+  }
+
+  const lastRestockedText = data.lastRestocked
+    ? new Date(data.lastRestocked).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'Never';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Low Stock Alert</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .container { background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; }
+          .alert h2 { color: #92400e; margin: 0 0 10px 0; }
+          .stats { background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .stat { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+          .stat:last-child { border-bottom: none; }
+          .stat-label { font-weight: bold; color: #6b7280; }
+          .stat-value { color: #1a4d2e; font-weight: bold; }
+          .warning { color: #dc2626; }
+          .cta-button { display: inline-block; background-color: #1a4d2e; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="alert">
+            <h2>⚠️ Low Stock Alert</h2>
+            <p><strong>${data.itemName}</strong> is running low on stock!</p>
+          </div>
+          
+          <div class="stats">
+            <div class="stat">
+              <span class="stat-label">Item:</span>
+              <span class="stat-value">${data.itemName}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Current Stock:</span>
+              <span class="stat-value warning">${data.currentStock} ${data.unit}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Minimum Stock:</span>
+              <span class="stat-value">${data.minimumStock} ${data.unit}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Suggested Reorder:</span>
+              <span class="stat-value">${data.suggestedReorder} ${data.unit}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Last Restocked:</span>
+              <span class="stat-value">${lastRestockedText}</span>
+            </div>
+          </div>
+          
+          <p style="text-align: center; margin: 30px 0;">
+            Please restock this item as soon as possible to avoid running out of stock.
+          </p>
+          
+          <div style="text-align: center;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/inventory" class="cta-button">
+              View Inventory Dashboard
+            </a>
+          </div>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Wawa Garden Bar - Admin Alert</p>
+            <p>This is an automated alert. Do not reply to this email.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+    LOW STOCK ALERT
+    
+    Item: ${data.itemName}
+    Current Stock: ${data.currentStock} ${data.unit}
+    Minimum Stock: ${data.minimumStock} ${data.unit}
+    Suggested Reorder: ${data.suggestedReorder} ${data.unit}
+    Last Restocked: ${lastRestockedText}
+    
+    Please restock this item as soon as possible.
+    
+    View Inventory: ${process.env.NEXT_PUBLIC_APP_URL}/dashboard/inventory
+    
+    © ${new Date().getFullYear()} Wawa Garden Bar
+  `;
+
+  await sendEmail({
+    to: adminEmail,
+    subject: `⚠️ Low Stock Alert: ${data.itemName}`,
+    html,
+    text,
+  });
+}

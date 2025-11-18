@@ -57,7 +57,7 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
     
     try {
       // Validate item availability
-      const validation = await validateCartItem(item._id.toString(), quantity);
+      const validation = await validateCartItem(item._id, quantity);
       
       if (!validation.success) {
         toast({
@@ -71,7 +71,7 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
 
       // Add to cart
       addItem({
-        id: item._id.toString(),
+        id: item._id,
         name: item.name,
         price: item.price,
         quantity,

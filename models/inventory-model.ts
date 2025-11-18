@@ -1,5 +1,10 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IInventory, IStockHistory, StockStatus } from '@/interfaces';
+import {
+  IInventory,
+  IStockHistory,
+  StockStatus,
+  StockHistoryCategory,
+} from '@/interfaces';
 
 const stockHistorySchema = new Schema<IStockHistory>(
   {
@@ -16,6 +21,17 @@ const stockHistorySchema = new Schema<IStockHistory>(
       required: true,
     },
     timestamp: { type: Date, default: Date.now },
+    category: {
+      type: String,
+      enum: ['sale', 'restock', 'waste', 'damage', 'adjustment'] as StockHistoryCategory[],
+    },
+    orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
+    invoiceNumber: { type: String },
+    supplier: { type: String },
+    costPerUnit: { type: Number, min: 0 },
+    totalCost: { type: Number, min: 0 },
+    notes: { type: String },
+    performedByName: { type: String },
   },
   { _id: false }
 );
@@ -43,6 +59,12 @@ const inventorySchema = new Schema<IInventory>(
     reorderQuantity: { type: Number, default: 0, min: 0 },
     supplier: { type: String },
     costPerUnit: { type: Number, required: true, min: 0 },
+    preventOrdersWhenOutOfStock: { type: Boolean, default: false },
+    salesVelocity: { type: Number, default: 0 },
+    lastSaleDate: { type: Date },
+    totalSales: { type: Number, default: 0, min: 0 },
+    totalWaste: { type: Number, default: 0, min: 0 },
+    totalRestocked: { type: Number, default: 0, min: 0 },
   },
   {
     timestamps: true,
