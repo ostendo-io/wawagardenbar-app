@@ -19,6 +19,40 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 * **Menu Navigation:** Intuitive category-based Browse.
 * **Shopping Cart:** Real-time order summary.
 * **Order Tracking:** Live status updates.
+* **Customer Profile Management:** (`/profile`)
+    * **Profile Information:**
+      - Full name (first name, last name)
+      - Email address (auto-populated from authentication)
+      - Phone number (with validation)
+      - Profile picture (optional upload)
+    * **Address Management:**
+      - Add multiple delivery addresses
+      - Set default delivery address
+      - Edit/delete saved addresses
+      - Address fields: street address, city, state, postal code, delivery instructions
+      - Quick address selection during checkout
+    * **Order History:**
+      - View all past orders with details
+      - Reorder functionality (one-click reorder)
+      - Order status tracking
+      - Download receipts/invoices
+    * **Preferences:**
+      - Dietary preferences/restrictions
+      - Favorite menu items
+      - Communication preferences (email/SMS notifications)
+    * **Account Security:**
+      - Change email (with verification)
+      - Manage sessions/devices
+      - Account deletion option
+    * **Auto-Save Behavior:**
+      - Email automatically saved on first order (guest or authenticated)
+      - Phone number saved when provided during checkout
+      - Delivery address saved after first delivery order
+      - Guest orders can be claimed by creating account with same email
+    * **Profile Completion:**
+      - Progressive profile completion prompts
+      - Profile completion percentage indicator
+      - Incentives for completing profile (e.g., welcome reward)
 * **Customer Rewards Dashboard:** (`/profile/rewards`)
     * **Statistics Overview:** Display active rewards count, total earned, total savings (₦), and loyalty points balance
     * **Active Rewards Tab:** View all active rewards with:
@@ -43,9 +77,9 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 * **Dashboard Sections Access Control:**
     * **Customer Role:** No access to any dashboard sections (redirected if attempting to access)
     * **Admin Role:** Access to the following dashboard sections only:
-      - Menu Management
       - Order Management
     * **Admin Role - Restricted Sections:** The following sections are NOT accessible to admin role:
+      - Menu Management
       - Customer Management
       - Inventory Management
       - Rewards Configuration
@@ -194,7 +228,40 @@ The application will be a **mobile-first, responsive web app** that facilitates 
     - Customize templates before saving
     - Save custom templates for reuse
 * **Analytics Dashboard:** Sales reports, popular items, peak hours, revenue tracking.
-* **Settings Management:** Restaurant hours, delivery radius, payment toggles.
+* **Settings Management:** (`/dashboard/settings`) - Super-admin only
+  - **Fee Configuration:**
+    - Service fee percentage (configurable, default 2%)
+    - Delivery fee base amount (default ₦1,000)
+    - Delivery fee reduced amount (default ₦500)
+    - Free delivery threshold (default ₦2,000)
+    - Minimum order amount (default ₦1,000)
+  - **Tax Configuration:**
+    - Tax percentage (configurable, default 7.5%)
+    - Tax enabled/disabled toggle
+  - **Order Configuration:**
+    - Estimated preparation time (minutes)
+    - Maximum orders per hour
+    - Guest checkout enabled/disabled
+  - **Order Type Toggles:**
+    - Enable/disable dine-in orders
+    - Enable/disable pickup orders
+    - Enable/disable delivery orders
+    - Delivery radius (kilometers)
+  - **Business Hours:**
+    - Configurable hours for each day of the week
+    - Open/close times
+    - Closed day toggle
+  - **Contact Information:**
+    - Public contact email
+    - Public contact phone
+    - Restaurant address
+  - **Features:**
+    - Real-time updates (1-minute cache)
+    - Audit trail for all changes
+    - Form validation with Zod
+    - Tabbed interface for organization
+    - All settings stored in MongoDB
+    - No code deployment required for changes
 
 ---
 
@@ -242,7 +309,14 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 * **Framework:** All backend logic resides *within* the Next.js application. **No separate Express.js server.**
 * **Database:** **MongoDB** with **Mongoose ODM**. Connection logic in `/lib/mongodb.ts`.
 * **Business Logic:**
-    * **Services (`/services`)** will contain all business logic and database operations (e.g., `ProductService`).
+    * **Services (`/services`)** will contain all business logic and database operations.
+    * **Key Services:**
+      - `SettingsService`: Manages application settings with caching (1-min TTL)
+      - `OrderService`: Order management and business logic
+      - `InventoryService`: Stock tracking and deduction
+      - `PaymentService`: Payment processing and validation
+      - `RewardsService`: Rewards calculation and issuance
+      - `AuditLogService`: Activity logging and tracking
     * **API Routes (`/app/api`)** must call services and not access Mongoose models directly.
     * **Hooks (`/hooks`)** must call API routes (using TanStack Query), not services directly.
 * **Mutations:** All data mutations (create, update, delete) must be handled via **Server Actions**, preferably with `useFormState` from React Hook Form.
@@ -259,8 +333,65 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 
 ### Database Schema (MongoDB Collections)
 
-* **Users Collection:** User ID, name, **email (unique, verified)**, phone, addresses, payment methods, total spent, rewards earned.
-* (Other collections remain the same: Menu Items, Orders, Payments, Rewards, Reward Rules, Inventory)
+* **Users Collection:** Enhanced profile management
+  - **Basic Information:**
+    - userId: ObjectId (primary key)
+    - email: String (unique, verified, indexed)
+    - firstName: String
+    - lastName: String
+    - phone: String (with country code)
+    - profilePicture: String (URL/path)
+    - emailVerified: Boolean
+    - phoneVerified: Boolean
+  - **Addresses Array:** (subdocument array for multiple addresses)
+    - addressId: ObjectId
+    - label: String (e.g., "Home", "Work", "Mom's House")
+    - streetAddress: String
+    - city: String
+    - state: String
+    - postalCode: String
+    - country: String (default: Nigeria)
+    - deliveryInstructions: String (optional)
+    - isDefault: Boolean (only one can be true)
+    - coordinates: { lat: Number, lng: Number } (for delivery radius validation)
+    - createdAt: Date
+    - lastUsedAt: Date
+  - **Preferences:**
+    - dietaryRestrictions: Array<String> (e.g., ["vegetarian", "gluten-free"])
+    - favoriteItems: Array<ObjectId> (references to MenuItem)
+    - communicationPreferences: { email: Boolean, sms: Boolean, push: Boolean }
+    - language: String (default: "en")
+  - **Account Metadata:**
+    - role: String (customer, admin, super-admin)
+    - accountStatus: String (active, suspended, deleted)
+    - totalSpent: Number (cumulative)
+    - totalOrders: Number (count)
+    - rewardsEarned: Number (count)
+    - loyaltyPoints: Number
+    - profileCompletionPercentage: Number (calculated)
+    - lastLoginAt: Date
+    - createdAt: Date
+    - updatedAt: Date
+  - **Guest Conversion:**
+    - guestOrderIds: Array<ObjectId> (orders placed before account creation)
+    - claimedAt: Date (when guest converted to registered user)
+* **Settings Collection:** (Singleton - only one document)
+  - Fee configuration (service fee %, delivery fees, thresholds)
+  - Tax configuration (tax %, enabled flag)
+  - Order configuration (prep time, max orders/hour, guest checkout)
+  - Order type toggles (dine-in, pickup, delivery enabled flags)
+  - Delivery radius
+  - Business hours (per day with open/close times and closed flag)
+  - Contact information (email, phone, address)
+  - Metadata (updatedBy, updatedByEmail, timestamps)
+* **Orders Collection:** Enhanced with serviceFee field
+  - All existing order fields
+  - serviceFee: Number (separate from total for tracking)
+  - tax: Number (for tax tracking when enabled)
+  - inventoryDeducted: Boolean (flag to prevent double deduction)
+  - inventoryDeductedAt: Date (timestamp of inventory deduction)
+  - inventoryDeductedBy: ObjectId (user who triggered deduction)
+* (Other collections: Menu Items, Payments, Rewards, Reward Rules, Inventory)
 
 ---
 
@@ -275,6 +406,47 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 4.  User is prompted to enter the 4-digit PIN.
 5.  User enters PIN $\rightarrow$ Backend verifies it.
 6.  On success, a session is created, and the user is logged in.
+7.  **First-time users:** Redirected to profile completion page (optional name, phone).
+8.  **Returning users:** Redirected to previous page or home.
+
+#### Guest Order Flow with Auto-Save
+1.  User browses menu without logging in $\rightarrow$ Adds items to cart.
+2.  At checkout, prompted for email and phone (required for order updates).
+3.  User enters email and phone $\rightarrow$ **System checks if email exists:**
+    - **If email exists:** Prompt to login to link order to account.
+    - **If new email:** Create guest profile with email and phone.
+4.  For delivery orders, user enters delivery address.
+5.  **Auto-save behavior:**
+    - Email saved to guest profile (or user account if logged in).
+    - Phone number saved to profile.
+    - Delivery address saved to addresses array (if delivery order).
+6.  Complete payment $\rightarrow$ Order confirmed.
+7.  **Guest conversion prompt:** After order, show banner: "Create account to track orders and earn rewards" with one-click signup.
+
+#### Profile Management Flow
+1.  **Access Profile:**
+    - Navigate to Profile icon/menu $\rightarrow$ `/profile` page.
+    - Tabs: Personal Info, Addresses, Order History, Preferences, Rewards.
+2.  **Edit Personal Information:**
+    - Click "Edit Profile" $\rightarrow$ Update name, phone, profile picture.
+    - Email change requires verification (send PIN to new email).
+    - Save changes $\rightarrow$ Show success toast.
+3.  **Manage Addresses:**
+    - View all saved addresses in card/list format.
+    - Click "Add New Address" $\rightarrow$ Form with all address fields.
+    - Set one address as default (radio button or toggle).
+    - Edit existing address $\rightarrow$ Update fields $\rightarrow$ Save.
+    - Delete address $\rightarrow$ Confirmation dialog $\rightarrow$ Remove.
+    - **During checkout:** Quick address selector shows saved addresses.
+4.  **Address Auto-Save During Checkout:**
+    - User enters new address at checkout.
+    - Show checkbox: "Save this address for future orders" (checked by default).
+    - After order completion, address saved to user's addresses array.
+    - Prompt to label address (e.g., "Home", "Work").
+5.  **Profile Completion:**
+    - Dashboard shows completion percentage (e.g., 60% complete).
+    - Missing fields highlighted: "Add phone number", "Add delivery address".
+    - **Future Feature:** Automatic reward when profile reaches 100% completion.
 
 #### Dine-in Order Flow
 1.  Open website $\rightarrow$ Select "Dine-in" $\rightarrow$ Scan QR or enter table.
@@ -289,6 +461,21 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 3.  Checkout $\rightarrow$ Choose payment method.
 4.  Order confirmation $\rightarrow$ Track delivery.
 5.  Receive order $\rightarrow$ Rate experience.
+
+#### Payment & Inventory Flow
+1.  Customer completes checkout $\rightarrow$ Payment processed via Monnify.
+2.  Monnify webhook confirms payment $\rightarrow$ Order status set to "confirmed".
+3.  **Inventory automatically deducted** for items with inventory tracking enabled.
+4.  Inventory deduction includes:
+    - Reduce currentStock by order quantity
+    - Add stock history entry (type: deduction, category: sale)
+    - Update inventory status (in-stock/low-stock/out-of-stock)
+    - Increment totalSales counter
+    - Update lastSaleDate
+    - Send low stock alerts if thresholds reached
+5.  Order marked with inventoryDeducted flag to prevent double deduction.
+6.  Kitchen receives order notification $\rightarrow$ Order progresses through statuses.
+7.  If admin manually marks order as "completed", inventory check prevents re-deduction.
 
 ---
 

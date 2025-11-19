@@ -50,6 +50,8 @@ const menuItemSchema = z.object({
   costPerUnit: z.number().min(0).optional(),
   supplier: z.string().optional(),
   preventOrdersWhenOutOfStock: z.boolean().optional(),
+  pointsRedeemable: z.boolean(),
+  pointsValue: z.number().min(0).optional(),
 });
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
@@ -66,8 +68,23 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [customizations, setCustomizations] = useState(menuItem.customizations || []);
+  const [conversionRate, setConversionRate] = useState(100);
   const router = useRouter();
   const { toast } = useToast();
+
+  // Fetch conversion rate on mount
+  useEffect(() => {
+    async function fetchConversionRate() {
+      try {
+        const response = await fetch('/api/settings/points-conversion-rate');
+        const data = await response.json();
+        setConversionRate(data.rate || 100);
+      } catch (error) {
+        console.error('Failed to fetch conversion rate:', error);
+      }
+    }
+    fetchConversionRate();
+  }, []);
 
   const {
     register,
@@ -101,6 +118,8 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
       costPerUnit: menuItem.inventory?.costPerUnit || 0,
       supplier: menuItem.inventory?.supplier || '',
       preventOrdersWhenOutOfStock: menuItem.inventory?.preventOrdersWhenOutOfStock || false,
+      pointsRedeemable: menuItem.pointsRedeemable || false,
+      pointsValue: menuItem.pointsValue || 0,
     },
   });
 
@@ -108,6 +127,9 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
   const isAvailable = watch('isAvailable');
   const name = watch('name');
   const trackInventory = watch('trackInventory');
+  const price = watch('price');
+  const pointsRedeemable = watch('pointsRedeemable');
+  const pointsValue = watch('pointsValue');
 
   // Track form changes
   useEffect(() => {
@@ -169,6 +191,12 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
         formData.append('costPerUnit', (data.costPerUnit || 0).toString());
         formData.append('supplier', data.supplier || '');
         formData.append('preventOrdersWhenOutOfStock', (data.preventOrdersWhenOutOfStock || false).toString());
+      }
+
+      // Add points redemption data
+      formData.append('pointsRedeemable', data.pointsRedeemable.toString());
+      if (data.pointsRedeemable && data.pointsValue) {
+        formData.append('pointsValue', data.pointsValue.toString());
       }
 
       const result = await updateMenuItemAction(menuItem._id, formData);
@@ -545,6 +573,84 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
                       </a>
                     </Button>
                   </>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Points Redemption Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Points Redemption Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Points Redeemable Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="pointsRedeemable">Allow Points Redemption</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable customers to purchase this item using loyalty points
+                </p>
+              </div>
+              <Switch
+                id="pointsRedeemable"
+                checked={pointsRedeemable}
+                onCheckedChange={(checked) => setValue('pointsRedeemable', checked)}
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Points Value Fields (shown when redeemable is enabled) */}
+            {pointsRedeemable && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label htmlFor="pointsValue">Points Value *</Label>
+                  <Input
+                    id="pointsValue"
+                    type="number"
+                    {...register('pointsValue', { valueAsNumber: true })}
+                    placeholder="0"
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Points required to redeem this item. Current rate: {conversionRate} points = ₦1
+                  </p>
+                  {errors.pointsValue && (
+                    <p className="text-sm text-destructive">{errors.pointsValue.message}</p>
+                  )}
+                </div>
+
+                {/* Auto-calculate button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const calculatedPoints = Math.round(price * conversionRate);
+                    setValue('pointsValue', calculatedPoints);
+                    toast({
+                      title: 'Points Calculated',
+                      description: `Set to ${calculatedPoints.toLocaleString()} points based on ₦${price.toLocaleString()} price`,
+                    });
+                  }}
+                  disabled={isLoading || !price}
+                >
+                  Calculate from Price
+                </Button>
+
+                {/* Conversion display */}
+                {pointsValue && pointsValue > 0 && (
+                  <div className="rounded-md bg-muted p-3 text-sm">
+                    <p className="font-medium">Conversion Preview:</p>
+                    <p className="text-muted-foreground">
+                      ₦{price.toLocaleString()} = {pointsValue.toLocaleString()} points
+                    </p>
+                    <p className="text-muted-foreground">
+                      ({conversionRate} points per ₦1)
+                    </p>
+                  </div>
                 )}
               </>
             )}

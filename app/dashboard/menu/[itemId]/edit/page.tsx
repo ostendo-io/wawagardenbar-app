@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/auth-middleware';
+import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
@@ -89,7 +89,7 @@ function EditFormSkeleton() {
  * Edit menu item page
  */
 export default async function EditMenuItemPage({ params }: EditMenuItemPageProps) {
-  await requireAdmin();
+  await requireSuperAdmin();
 
   const { itemId } = await params;
   const menuItem = await getMenuItem(itemId);

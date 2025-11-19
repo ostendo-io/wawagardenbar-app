@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
 import { PaymentService } from '@/services/payment-service';
+import { InventoryService, RewardsService } from '@/services';
 import { MonnifyWebhookPayload } from '@/interfaces/payment';
 
 /**
@@ -81,6 +82,37 @@ export async function POST(request: NextRequest) {
       });
 
       console.log('Order confirmed:', order._id);
+
+      // Deduct inventory immediately after payment confirmation
+      if (!order.inventoryDeducted) {
+        try {
+          await InventoryService.deductStockForOrder(order._id.toString());
+          order.inventoryDeducted = true;
+          order.inventoryDeductedAt = new Date();
+          console.log('Inventory deducted for order:', order._id);
+        } catch (error) {
+          console.error('Error deducting inventory for order:', order._id, error);
+          // Continue processing - don't fail webhook due to inventory issues
+        }
+      }
+
+      // Calculate and issue reward if user is logged in
+      if (order.userId) {
+        try {
+          const reward = await RewardsService.calculateReward(
+            order.userId.toString(),
+            order._id.toString(),
+            order.total
+          );
+          
+          if (reward) {
+            console.log('Reward issued for order:', order._id, 'Reward code:', reward.code);
+          }
+        } catch (error) {
+          console.error('Error calculating reward for order:', order._id, error);
+          // Continue processing - don't fail webhook due to reward issues
+        }
+      }
     } else if (payload.paymentStatus === 'FAILED') {
       order.status = 'cancelled';
       
@@ -97,7 +129,6 @@ export async function POST(request: NextRequest) {
 
     // TODO: Send confirmation email/SMS to customer
     // TODO: Notify kitchen/admin of new order
-    // TODO: Update inventory if needed
 
     return NextResponse.json({
       success: true,

@@ -211,6 +211,10 @@ export async function updateMenuItemAction(
     const costPerUnit = formData.get('costPerUnit') ? parseFloat(formData.get('costPerUnit') as string) : undefined;
     const supplier = formData.get('supplier') as string;
     const preventOrdersWhenOutOfStock = formData.get('preventOrdersWhenOutOfStock') === 'true';
+    
+    // Points redemption
+    const pointsRedeemable = formData.get('pointsRedeemable') === 'true';
+    const pointsValue = formData.get('pointsValue') ? parseFloat(formData.get('pointsValue') as string) : undefined;
 
     // Update basic fields
     if (name) menuItem.name = name;
@@ -236,6 +240,14 @@ export async function updateMenuItemAction(
     
     // Update inventory tracking
     menuItem.trackInventory = trackInventory;
+    
+    // Update points redemption
+    menuItem.pointsRedeemable = pointsRedeemable;
+    if (pointsRedeemable && pointsValue !== undefined) {
+      menuItem.pointsValue = pointsValue;
+    } else if (!pointsRedeemable) {
+      menuItem.pointsValue = undefined;
+    }
     
     // Handle inventory record
     if (trackInventory) {

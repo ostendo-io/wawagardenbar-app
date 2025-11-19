@@ -60,6 +60,7 @@ export interface IOrder {
   status: OrderStatus;
   items: IOrderItem[];
   subtotal: number;
+  serviceFee: number;
   tax: number;
   deliveryFee: number;
   discount: number;
@@ -88,6 +89,13 @@ export interface IOrder {
   estimatedCompletionTime?: Date;
   preparationStartedAt?: Date;
   kitchenPriority?: 'normal' | 'urgent';
+  pointsUsed: number;
+  pointsValue: number;
+  itemsPaidWithPoints: Array<{
+    itemId: Types.ObjectId;
+    pointsUsed: number;
+  }>;
+  appliedRewards: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }

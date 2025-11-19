@@ -17,17 +17,22 @@ export function CartSummary({ orderType = 'dine-in', showFees = false }: CartSum
   const totalItems = getTotalItems();
 
   // Calculate fees
+  // Note: This component uses hardcoded fees for immediate display
+  // For accurate fees, use the fee calculator or settings API
+  // TODO: Replace with real-time fee calculation from settings
   let deliveryFee = 0;
   let serviceFee = 0;
+  let tax = 0;
 
-  if (showFees) {
+  if (orderType) {
     if (orderType === 'delivery') {
       deliveryFee = subtotal >= 2000 ? 500 : 1000;
     }
     serviceFee = Math.round(subtotal * 0.02);
+    // Tax calculation would go here if enabled
   }
 
-  const total = subtotal + deliveryFee + serviceFee;
+  const total = subtotal + deliveryFee + serviceFee + tax;
 
   // Minimum order requirements
   const minimumOrders = {

@@ -96,6 +96,7 @@ const orderSchema = new Schema<IOrder>(
     },
     items: { type: [orderItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },
+    serviceFee: { type: Number, default: 0, min: 0 },
     tax: { type: Number, default: 0, min: 0 },
     deliveryFee: { type: Number, default: 0, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
@@ -147,6 +148,15 @@ const orderSchema = new Schema<IOrder>(
       enum: ['normal', 'urgent'],
       default: 'normal',
     },
+    pointsUsed: { type: Number, default: 0, min: 0 },
+    pointsValue: { type: Number, default: 0, min: 0 },
+    itemsPaidWithPoints: [
+      {
+        itemId: { type: Schema.Types.ObjectId, ref: 'MenuItem' },
+        pointsUsed: { type: Number },
+      },
+    ],
+    appliedRewards: [{ type: Schema.Types.ObjectId, ref: 'Reward' }],
   },
   {
     timestamps: true,

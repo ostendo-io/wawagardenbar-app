@@ -47,10 +47,10 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 * **Dashboard Sections Access Control:**
     * **Customer Role:** No access to any dashboard sections (redirected if attempting to access)
     * **Admin Role:** Access to the following dashboard sections only:
-      - Menu Management
       - Order Management
-      - Customer Management
     * **Admin Role - Restricted Sections:** The following sections are NOT accessible to admin role:
+      - Menu Management
+      - Customer Management
       - Inventory Management
       - Rewards Configuration
       - Analytics Dashboard
@@ -198,7 +198,40 @@ The application will be a **mobile-first, responsive web app** that facilitates 
     - Customize templates before saving
     - Save custom templates for reuse
 * **Analytics Dashboard:** Sales reports, popular items, peak hours, revenue tracking.
-* **Settings Management:** Restaurant hours, delivery radius, payment toggles.
+* **Settings Management:** (`/dashboard/settings`) - Super-admin only
+  - **Fee Configuration:**
+    - Service fee percentage (configurable, default 2%)
+    - Delivery fee base amount (default ₦1,000)
+    - Delivery fee reduced amount (default ₦500)
+    - Free delivery threshold (default ₦2,000)
+    - Minimum order amount (default ₦1,000)
+  - **Tax Configuration:**
+    - Tax percentage (configurable, default 7.5%)
+    - Tax enabled/disabled toggle
+  - **Order Configuration:**
+    - Estimated preparation time (minutes)
+    - Maximum orders per hour
+    - Guest checkout enabled/disabled
+  - **Order Type Toggles:**
+    - Enable/disable dine-in orders
+    - Enable/disable pickup orders
+    - Enable/disable delivery orders
+    - Delivery radius (kilometers)
+  - **Business Hours:**
+    - Configurable hours for each day of the week
+    - Open/close times
+    - Closed day toggle
+  - **Contact Information:**
+    - Public contact email
+    - Public contact phone
+    - Restaurant address
+  - **Features:**
+    - Real-time updates (1-minute cache)
+    - Audit trail for all changes
+    - Form validation with Zod
+    - Tabbed interface for organization
+    - All settings stored in MongoDB
+    - No code deployment required for changes
 
 ---
 
@@ -213,26 +246,4 @@ The application will be a **mobile-first, responsive web app** that facilitates 
     * **Avoid `any`**.
     * All variables, functions (parameters and returns) must be explicitly typed.
 * **Exports:** Use **named exports** for components. One export per file.
-* **Naming:**
-    * Files & Directories: **kebab-case** (e.g., `auth-wizard`).
-    * Components & Interfaces: `PascalCase`.
-    * Variables & Functions: `camelCase`.
-* **File Structure:**
-    * `/app/dashboard`: Admin panel pages.
-    * `/app/api`: API Route Handlers.
-    * `/services`: Backend business logic.
-    * `/models`: Mongoose database models.
-    * `/hooks`: Client-side React hooks.
-    * `/interfaces`: Shared types and interfaces.
-    * `/lib`: Utility functions, DB connection (`mongodb.ts`).
-    * `/components/ui`: Shadcn UI components.
-    * `/components/shared`: Reusable application components.
-
-#### 2. Frontend (Client Components)
-* **RSC First:** **Minimize 'use client'**. Favor Server Components for fetching and rendering. Client components should be small, interactive "islands."
-* **UI Framework:** **Shadcn UI**, **Radix UI**, and **Tailwind CSS**. No other UI libraries (like MUI or Chakra) are permitted.
-* **State Management:**
-    * **Server State:** Managed by **React Server Components (RSC)**.
-    * **Client URL State:** Managed with **`nuqs`**.
-    * **Global Client State:** Managed with **Zustand** (use sparingly).
-    * **Local 
+* **Naming:

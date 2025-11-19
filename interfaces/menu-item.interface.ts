@@ -47,6 +47,8 @@ export interface IMenuItem {
   metaDescription?: string;
   trackInventory: boolean;
   inventoryId?: string;
+  pointsValue?: number;
+  pointsRedeemable: boolean;
   createdAt: string;
   updatedAt: string;
 }

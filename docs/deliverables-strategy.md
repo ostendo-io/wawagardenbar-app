@@ -120,7 +120,7 @@ All components must follow the mobile-first approach with Tailwind CSS
      ```typescript
      const navItems = [
        { label: 'Overview', href: '/dashboard', roles: ['admin', 'super-admin'] },
-       { label: 'Menu', href: '/dashboard/menu', roles: ['admin', 'super-admin'] },
+       { label: 'Menu', href: '/dashboard/menu', roles: ['super-admin'] },
        { label: 'Orders', href: '/dashboard/orders', roles: ['admin', 'super-admin'] },
        { label: 'Customers', href: '/dashboard/customers', roles: ['super-admin'] },
        { label: 'Inventory', href: '/dashboard/inventory', roles: ['super-admin'] },
@@ -131,7 +131,7 @@ All components must follow the mobile-first approach with Tailwind CSS
      ];
      ```
    - Filter navigation items based on current user's role
-   - Hide restricted sections from admin users (Customers, Inventory, Rewards, Analytics, Audit Logs, Settings)
+   - Hide restricted sections from admin users (Menu, Customers, Inventory, Rewards, Analytics, Audit Logs, Settings)
 
 3. **Role-Based Middleware (`/middleware.ts`):**
    - Create middleware to protect dashboard routes
@@ -143,7 +143,7 @@ All components must follow the mobile-first approach with Tailwind CSS
      ```typescript
      const routePermissions = {
        '/dashboard': ['admin', 'super-admin'],
-       '/dashboard/menu': ['admin', 'super-admin'],
+       '/dashboard/menu': ['super-admin'],
        '/dashboard/orders': ['admin', 'super-admin'],
        '/dashboard/customers': ['super-admin'],
        '/dashboard/inventory': ['super-admin'],
@@ -261,7 +261,124 @@ Build checkout and payment system using Monnify:
 5. Create webhook handler at /app/api/webhooks/monnify for payment confirmations
 6. Implement payment security with encryption and proper API key management
 7. Add payment method selection UI with clear instructions for each method
+8. **Auto-save customer information during checkout:**
+   - Capture email and phone at checkout (required fields)
+   - Check if email exists in database
+   - If new email: create guest profile with email, phone
+   - If existing email: prompt to login to link order
+   - For delivery orders: save address to user's addresses array
+   - Show checkbox "Save this address for future orders" (checked by default)
 Use Server Actions for payment initialization, minimize client-side payment logic
+```
+
+### Feature 2.5: Customer Profile Management System
+**Priority:** P1 - Critical  
+**Dependencies:** 2.4  
+**Status:** 🆕 NEW FEATURE  
+**Prompt:**
+```
+Build comprehensive customer profile management system:
+
+PART 1: User Model Enhancement (/models/user-model.ts)
+1. Extend User schema with:
+   - Basic info: firstName, lastName, phone, profilePicture
+   - Addresses array (subdocuments):
+     * addressId, label, streetAddress, city, state, postalCode
+     * deliveryInstructions, isDefault, coordinates, lastUsedAt
+   - Preferences: dietaryRestrictions, favoriteItems, communicationPreferences
+   - Metadata: profileCompletionPercentage, lastLoginAt
+   - Guest conversion: guestOrderIds, claimedAt
+2. Add validation for phone numbers (with country code)
+3. Add method to calculate profile completion percentage
+4. Add method to get default address
+5. Add indexes on email, phone, addresses.isDefault
+
+PART 2: Profile Service (/services/profile-service.ts)
+1. Create ProfileService with methods:
+   - getUserProfile(userId): Get complete profile
+   - updateProfile(userId, data): Update basic info
+   - uploadProfilePicture(userId, file): Handle image upload
+   - addAddress(userId, address): Add new address
+   - updateAddress(userId, addressId, data): Update address
+   - deleteAddress(userId, addressId): Remove address
+   - setDefaultAddress(userId, addressId): Set default
+   - getAddresses(userId): Get all addresses
+   - calculateProfileCompletion(user): Calculate percentage
+   - claimGuestOrders(userId, email): Link guest orders to account
+2. Implement proper validation and error handling
+3. Ensure only one default address at a time
+
+PART 3: Profile Actions (/app/actions/profile/profile-actions.ts)
+1. Create Server Actions:
+   - updateProfileAction(formData): Update profile info
+   - addAddressAction(addressData): Add new address
+   - updateAddressAction(addressId, data): Update address
+   - deleteAddressAction(addressId): Delete address
+   - setDefaultAddressAction(addressId): Set default
+   - uploadProfilePictureAction(formData): Upload picture
+2. Include proper authentication checks
+3. Add audit logging for profile changes
+4. Return success/error states for UI feedback
+
+PART 4: Profile Page (/app/(customer)/profile/page.tsx)
+1. Create tabbed profile interface:
+   - Personal Info tab: name, email, phone, profile picture
+   - Addresses tab: list of addresses with add/edit/delete
+   - Order History tab: past orders with reorder button
+   - Preferences tab: dietary restrictions, favorites
+   - Security tab: change email, manage sessions
+2. Show profile completion percentage with progress bar
+3. Highlight missing fields with prompts
+4. Use Server Components for data fetching
+5. Client components only for interactive forms
+
+PART 5: Profile Edit Forms (/components/features/profile/)
+1. Create form components:
+   - PersonalInfoForm: edit name, phone, picture
+   - AddressForm: add/edit address with all fields
+   - PreferencesForm: dietary restrictions, communication
+2. Use React Hook Form with Zod validation
+3. Implement optimistic UI updates
+4. Show loading states and success/error toasts
+5. Address form includes:
+   - Label input (Home, Work, etc.)
+   - Street address, city, state, postal code
+   - Delivery instructions textarea
+   - Set as default checkbox
+   - Coordinates (optional, for future map integration)
+
+PART 6: Checkout Integration
+1. Update checkout flow to:
+   - Pre-fill email, phone from user profile
+   - Show saved addresses dropdown for delivery orders
+   - Allow quick address selection or "Add new address"
+   - Auto-save new addresses with user confirmation
+   - For guests: create profile on first order
+2. Add "Save for future orders" checkbox (default checked)
+3. After order: prompt guest users to create account
+
+PART 7: Guest Conversion Flow
+1. After guest completes order:
+   - Show banner: "Create account to track orders and earn rewards"
+   - One-click signup using email from order
+   - Send PIN to email for verification
+   - On verification: link all guest orders to new account
+2. Update order records with userId
+3. Transfer addresses to user profile
+4. Award welcome reward for account creation
+
+Technical Requirements:
+- Use Server Components for all profile pages
+- Client components only for forms and interactive elements
+- Implement proper error boundaries
+- Add loading skeletons for async operations
+- Use Suspense for data fetching
+- Validate all inputs with Zod
+- Sanitize user inputs to prevent XSS
+- Implement rate limiting on profile updates
+- Add audit logging for sensitive changes (email, address)
+- Optimize images with Next.js Image component
+- Use optimistic updates for better UX
 ```
 
 ---
@@ -355,7 +472,7 @@ Outstanding features to add:
 - Pagination or infinite scroll
 - Bulk actions (bulk status update, bulk delete)
 
-PART 2: Edit Menu Item Page (/app/dashboard/menu/[itemId]/edit) - ❌ NOT BUILT
+PART 2: Edit Menu Item Page (/app/dashboard/menu/[itemId]/edit) - 
 Build comprehensive menu item edit page:
 
 1. **Page Structure:**
@@ -928,10 +1045,121 @@ Ensure zero-downtime deployments, implement rollback procedures
 
 ---
 
+## Profile System Implementation Checklist
+
+### Database & Models
+- [ ] Extend User model with addresses array subdocument
+- [ ] Add firstName, lastName, phone, profilePicture fields
+- [ ] Add preferences object (dietaryRestrictions, favoriteItems, communicationPreferences)
+- [ ] Add profileCompletionPercentage field
+- [ ] Add guestOrderIds array for guest conversion
+- [ ] Add indexes on email, phone, addresses.isDefault
+- [ ] Create address subdocument schema with all fields
+- [ ] Add validation for phone numbers (E.164 format)
+- [ ] Add method to calculate profile completion percentage
+- [ ] Add method to get default address
+
+### Services Layer
+- [ ] Create ProfileService class in /services/profile-service.ts
+- [ ] Implement getUserProfile(userId) method
+- [ ] Implement updateProfile(userId, data) method
+- [ ] Implement uploadProfilePicture(userId, file) method
+- [ ] Implement addAddress(userId, address) method
+- [ ] Implement updateAddress(userId, addressId, data) method
+- [ ] Implement deleteAddress(userId, addressId) method
+- [ ] Implement setDefaultAddress(userId, addressId) method
+- [ ] Implement getAddresses(userId) method
+- [ ] Implement claimGuestOrders(userId, email) method
+- [ ] Add validation to ensure only one default address
+- [ ] Export ProfileService from /services/index.ts
+
+### Server Actions
+- [ ] Create /app/actions/profile/profile-actions.ts
+- [ ] Implement updateProfileAction(formData)
+- [ ] Implement addAddressAction(addressData)
+- [ ] Implement updateAddressAction(addressId, data)
+- [ ] Implement deleteAddressAction(addressId)
+- [ ] Implement setDefaultAddressAction(addressId)
+- [ ] Implement uploadProfilePictureAction(formData)
+- [ ] Add authentication checks to all actions
+- [ ] Add audit logging for profile changes
+- [ ] Add rate limiting for sensitive operations
+
+### Profile Pages
+- [ ] Create /app/(customer)/profile/page.tsx (main profile page)
+- [ ] Create /app/(customer)/profile/layout.tsx (profile layout with tabs)
+- [ ] Create Personal Info tab component
+- [ ] Create Addresses tab component
+- [ ] Create Order History tab component
+- [ ] Create Preferences tab component
+- [ ] Create Security tab component
+- [ ] Add profile completion progress bar
+- [ ] Add missing field prompts
+- [ ] Implement tab navigation with nuqs
+
+### Profile Components
+- [ ] Create /components/features/profile/personal-info-form.tsx
+- [ ] Create /components/features/profile/address-form.tsx
+- [ ] Create /components/features/profile/address-card.tsx
+- [ ] Create /components/features/profile/preferences-form.tsx
+- [ ] Create /components/features/profile/profile-picture-upload.tsx
+- [ ] Create /components/features/profile/profile-completion-card.tsx
+- [ ] Add Zod validation schemas for all forms
+- [ ] Implement optimistic UI updates
+- [ ] Add loading states and skeletons
+- [ ] Add success/error toast notifications
+
+### Checkout Integration
+- [ ] Update checkout to pre-fill email from user profile
+- [ ] Update checkout to pre-fill phone from user profile
+- [ ] Add saved addresses dropdown for delivery orders
+- [ ] Add "Use different address" option
+- [ ] Add "Save this address" checkbox (default checked)
+- [ ] Implement auto-save for new addresses after order
+- [ ] Add address label prompt after saving
+- [ ] For guests: create profile on first order
+- [ ] Check if email exists before creating guest profile
+- [ ] Prompt existing users to login when email matches
+
+### Guest Conversion
+- [ ] Create guest conversion banner component
+- [ ] Show banner after guest order completion
+- [ ] Implement one-click signup from banner
+- [ ] Send PIN to email for verification
+- [ ] Link guest orders to new account on verification
+- [ ] Transfer saved addresses to user profile
+- [ ] Award welcome reward for account creation
+- [ ] Update order records with userId
+
+### API Routes (if needed)
+- [ ] Create /app/api/profile/route.ts (GET, PUT)
+- [ ] Create /app/api/profile/addresses/route.ts (GET, POST)
+- [ ] Create /app/api/profile/addresses/[id]/route.ts (PUT, DELETE)
+- [ ] Add proper authentication middleware
+- [ ] Add rate limiting
+- [ ] Add input validation
+
+### Testing
+- [ ] Test profile creation on first login
+- [ ] Test profile update with all fields
+- [ ] Test adding multiple addresses
+- [ ] Test setting default address
+- [ ] Test deleting non-default address
+- [ ] Test preventing deletion of default address
+- [ ] Test address auto-save during checkout
+- [ ] Test guest profile creation
+- [ ] Test guest conversion flow
+- [ ] Test profile completion percentage calculation
+- [ ] Test profile picture upload
+- [ ] Test email change with verification
+- [ ] Test phone number validation
+
+---
+
 ## Timeline Summary
 
 - **Week 1-2:** Foundation & Infrastructure
-- **Week 3-4:** Core Customer Experience
+- **Week 3-4:** Core Customer Experience + Profile Management
 - **Week 5-6:** Order Management & Tracking
 - **Week 7-8:** Admin Dashboard
 - **Week 9-10:** Optimization & Polish

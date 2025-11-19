@@ -55,16 +55,13 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
     const userId = session.userId;
 
-    // Calculate totals
+    // Calculate totals using SettingsService
     const subtotal = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     
-    let deliveryFee = 0;
-    if (input.orderType === 'delivery') {
-      deliveryFee = subtotal >= 2000 ? 500 : 1000;
-    }
+    const { SettingsService } = await import('@/services');
+    const totals = await SettingsService.calculateOrderTotals(subtotal, input.orderType);
     
-    const serviceFee = Math.round(subtotal * 0.02);
-    const total = subtotal + deliveryFee + serviceFee;
+    const { serviceFee, deliveryFee, tax, total } = totals;
 
     // Generate order number
     const orderNumber = `WGB${Date.now().toString().slice(-8)}`;
@@ -96,6 +93,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         guestPhone: input.customerInfo.phone,
       }),
       subtotal,
+      serviceFee,
+      tax,
       deliveryFee,
       total,
       estimatedWaitTime,

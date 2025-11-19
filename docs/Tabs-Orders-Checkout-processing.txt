@@ -1,0 +1,21 @@
+Review existing implementation of customer orders, rewards and checkout processing and create a tabs-and-orders-system-spec.md file detailing requirements, modifications to the existing implementation and implemetation details required to deliver these new requirementstab can be opened by staff and customers once a tab is opened orders can be placed on the tab
+
+after customer select dine-in as part of the order creation process
+    customer should be able to open a new tab if there is no existing open tab and add an order to it 
+    or add an order to an existing tab if they already have an open tab
+    or complete an order and pay without opening a tab
+
+Once a customer has opened a tab and added items to the basket they can complete the order without completing payment. The tab that the order is associated with will remain open.
+
+There will be a tabs button similar kitchen display in the "dashboard > orders" where staff can view all open tabs and table numbers and the orders associated with them.
+
+Staff will be able to open a tab and create an order for it and continue to add orders to it till the customer decides they want to close the tab and pay. Then the staff can complete checkout and process payment for the tab This will update status of the tab to paid and close the tab.
+
+The order will be displayed in the dashboard orders tab as usual and will be able to be processed by staff.
+
+The customer > orders page will display orders as it currently does or it will display tabs with associated orders so customers cav view the orders they have made within the associated tabs. Customers can then choose wether to add another order to the tab or pay and close the tab following the normal checkout process.
+
+Rewards will be applied to the tab as they are to orders.
+
+remove rundundant code and update the existing implementation to support tabs and orders
+

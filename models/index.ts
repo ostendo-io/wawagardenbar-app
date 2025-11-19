@@ -5,3 +5,5 @@ export { default as PaymentModel } from './payment-model';
 export { default as RewardModel } from './reward-model';
 export { default as RewardRuleModel } from './reward-rule-model';
 export { default as InventoryModel } from './inventory-model';
+export { default as SystemSettingsModel } from './system-settings-model';
+export { default as PointsTransactionModel } from './points-transaction-model';

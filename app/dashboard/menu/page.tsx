@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/auth-middleware';
+import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -148,7 +148,7 @@ function TableSkeleton() {
  * Menu management page
  */
 export default async function MenuPage() {
-  await requireAdmin();
+  await requireSuperAdmin();
 
   return (
     <div className="space-y-6">

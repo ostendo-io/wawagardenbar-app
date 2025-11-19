@@ -185,10 +185,16 @@ export class RewardsService {
 
     // Add loyalty points if applicable
     if (reward.rewardType === 'loyalty-points') {
-      if (!user.loyaltyPoints) {
-        user.loyaltyPoints = 0;
-      }
-      user.loyaltyPoints += reward.rewardValue;
+      const PointsService = (await import('./points-service')).PointsService;
+      
+      // Use PointsService to properly track points
+      await PointsService.awardPoints(
+        userId,
+        reward.rewardValue,
+        reward.orderId,
+        reward._id,
+        `Earned ${reward.rewardValue} points from reward`
+      );
     }
 
     await user.save();
@@ -212,6 +218,47 @@ export class RewardsService {
       .lean();
 
     return rewards as IReward[];
+  }
+
+  /**
+   * Get available reward rules for customer display
+   * Filters by user eligibility based on max redemptions
+   */
+  static async getAvailableRulesForUser(userId: string): Promise<IRewardRule[]> {
+    await connectDB();
+
+    const now = new Date();
+    const allActiveRules = await RewardRule.find({
+      isActive: true,
+      $and: [
+        {
+          $or: [
+            { startDate: { $exists: false } },
+            { startDate: { $lte: now } },
+          ],
+        },
+        {
+          $or: [
+            { endDate: { $exists: false } },
+            { endDate: { $gte: now } },
+          ],
+        },
+      ],
+    })
+      .sort({ spendThreshold: 1 })
+      .lean();
+
+    // Get user redemption counts
+    const userRedemptionCounts = await this.getUserRedemptionCounts(userId);
+
+    // Filter rules based on max redemptions
+    const availableRules = allActiveRules.filter((rule) => {
+      if (!rule.maxRedemptionsPerUser) return true;
+      const count = userRedemptionCounts.get(rule._id.toString()) || 0;
+      return count < rule.maxRedemptionsPerUser;
+    });
+
+    return availableRules as IRewardRule[];
   }
 
   /**

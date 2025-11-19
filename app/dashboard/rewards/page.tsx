@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { RewardStatsCards, RewardCharts } from '@/components/features/admin/rewards';
+import { PointsConversionSettings } from '@/components/features/admin/rewards/points-conversion-settings';
 import {
   getRewardStatisticsAction,
   getRewardsIssuedOverTimeAction,
@@ -166,6 +167,9 @@ export default async function RewardsDashboardPage() {
           </Link>
         </Card>
       </div>
+
+      {/* Points Conversion Settings */}
+      <PointsConversionSettings />
 
       {/* Analytics & Charts */}
       <Suspense fallback={<StatsLoading />}>

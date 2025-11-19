@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
     title: 'Menu',
     href: '/dashboard/menu',
     icon: UtensilsCrossed,
-    roles: ['admin', 'super-admin'],
+    roles: ['super-admin'],
   },
   {
     title: 'Customers',

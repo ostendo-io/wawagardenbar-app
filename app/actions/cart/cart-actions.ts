@@ -84,34 +84,21 @@ export async function validateCart(items: Array<{ id: string; quantity: number }
 
 /**
  * Calculate cart totals with delivery fee
+ * Uses SettingsService for dynamic fee calculation
  */
 export async function calculateCartTotals(
   subtotal: number,
   orderType: 'dine-in' | 'pickup' | 'delivery'
 ): Promise<CartActionResult> {
   try {
-    let deliveryFee = 0;
-    let serviceFee = 0;
-
-    // Calculate fees based on order type
-    if (orderType === 'delivery') {
-      // Base delivery fee (can be calculated based on distance in future)
-      deliveryFee = subtotal >= 2000 ? 500 : 1000;
-    }
-
-    // Service fee (2% of subtotal)
-    serviceFee = Math.round(subtotal * 0.02);
-
-    const total = subtotal + deliveryFee + serviceFee;
+    const { SettingsService } = await import('@/services');
+    
+    // Calculate all fees using SettingsService
+    const totals = await SettingsService.calculateOrderTotals(subtotal, orderType);
 
     return {
       success: true,
-      data: {
-        subtotal,
-        deliveryFee,
-        serviceFee,
-        total,
-      },
+      data: totals,
     };
   } catch (error) {
     console.error('Error calculating cart totals:', error);

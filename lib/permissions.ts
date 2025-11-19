@@ -7,7 +7,7 @@ import { SessionData } from './session';
  */
 export const routePermissions: Record<string, UserRole[]> = {
   '/dashboard': ['admin', 'super-admin'],
-  '/dashboard/menu': ['admin', 'super-admin'],
+  '/dashboard/menu': ['super-admin'],
   '/dashboard/orders': ['admin', 'super-admin'],
   '/dashboard/customers': ['super-admin'],
   '/dashboard/inventory': ['super-admin'],
@@ -23,7 +23,7 @@ export const routePermissions: Record<string, UserRole[]> = {
  */
 export const dashboardSections = {
   overview: { roles: ['admin', 'super-admin'] as UserRole[] },
-  menu: { roles: ['admin', 'super-admin'] as UserRole[] },
+  menu: { roles: ['super-admin'] as UserRole[] },
   orders: { roles: ['admin', 'super-admin'] as UserRole[] },
   customers: { roles: ['super-admin'] as UserRole[] },
   inventory: { roles: ['super-admin'] as UserRole[] },

@@ -2,14 +2,17 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { RewardsService } from '@/services';
+import { MainLayout } from '@/components/shared/layout';
+import { Container } from '@/components/shared/layout';
+import { RewardsService, PointsService } from '@/services';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Gift, TrendingUp, Award, Clock } from 'lucide-react';
-import { IReward } from '@/interfaces';
+import { Gift, TrendingUp, Award, Clock, Percent, DollarSign, ShoppingBag, Star, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { IReward, IRewardRule } from '@/interfaces';
+import { IPointsTransaction } from '@/models/points-transaction-model';
 
 /**
  * User rewards page
@@ -23,29 +26,24 @@ export default async function RewardsPage() {
     redirect('/login?redirect=/profile/rewards');
   }
 
-  const [activeRewards, rewardHistory, stats] = await Promise.all([
+  const [activeRewards, rewardHistory, stats, availableRules, pointsBalance, pointsTransactions] = await Promise.all([
     RewardsService.getUserActiveRewards(session.userId),
     RewardsService.getUserRewardHistory(session.userId, { limit: 10 }),
     RewardsService.getUserRewardStats(session.userId),
+    RewardsService.getAvailableRulesForUser(session.userId),
+    PointsService.getBalance(session.userId),
+    PointsService.getTransactionHistory(session.userId, 10, 0),
   ]);
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">My Rewards</h1>
-          <p className="text-muted-foreground">
-            Manage your rewards and track your savings
-          </p>
-        </div>
-        
-        <Link href="/profile">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Profile
-          </Button>
-        </Link>
+    <MainLayout>
+      <Container size="xl" className="py-8">
+        {/* Header */}
+        <div className="mb-6">
+        <h1 className="text-3xl font-bold">My Rewards</h1>
+        <p className="text-muted-foreground">
+          Manage your rewards and track your savings
+        </p>
       </div>
 
       {/* Statistics Cards */}
@@ -96,19 +94,51 @@ export default async function RewardsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{stats.loyaltyPoints}</p>
+            <p className="text-3xl font-bold">{pointsBalance.balance.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">
-              = ₦{Math.floor(stats.loyaltyPoints / 100)}
+              = ₦{pointsBalance.nairaValue.toLocaleString()}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Types of Rewards Available */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Types of Rewards Available</CardTitle>
+          <CardDescription>
+            Earn rewards automatically when you place orders that meet spending thresholds
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {availableRules.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Gift className="mb-3 h-12 w-12 text-muted-foreground" />
+              <p className="text-lg font-medium text-muted-foreground">
+                No rewards campaigns currently running
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Check back soon for new reward opportunities!
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {availableRules.map((rule) => (
+                <RewardRuleCard key={rule._id.toString()} rule={rule} userId={session.userId!} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active">
             Active Rewards ({activeRewards.length})
+          </TabsTrigger>
+          <TabsTrigger value="points">
+            Points History ({pointsTransactions.total})
           </TabsTrigger>
           <TabsTrigger value="history">
             History ({rewardHistory.total})
@@ -139,6 +169,27 @@ export default async function RewardsPage() {
           )}
         </TabsContent>
 
+        {/* Points History Tab */}
+        <TabsContent value="points" className="space-y-4">
+          {pointsTransactions.transactions.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Award className="mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-semibold">No points transactions</h3>
+                <p className="text-center text-muted-foreground">
+                  Your points transaction history will appear here
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {pointsTransactions.transactions.map((transaction) => (
+                <PointsTransactionCard key={transaction._id.toString()} transaction={transaction} conversionRate={pointsBalance.conversionRate} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
         {/* History Tab */}
         <TabsContent value="history" className="space-y-4">
           {rewardHistory.rewards.length === 0 ? (
@@ -160,7 +211,8 @@ export default async function RewardsPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+      </Container>
+    </MainLayout>
   );
 }
 
@@ -290,6 +342,150 @@ function RewardHistoryCard({ reward }: { reward: IReward }) {
               Redeemed {new Date(reward.redeemedAt).toLocaleDateString()}
             </p>
           )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Points transaction card component
+ */
+function PointsTransactionCard({ transaction, conversionRate }: { transaction: IPointsTransaction; conversionRate: number }) {
+  function getTransactionIcon(type: string) {
+    switch (type) {
+      case 'earned':
+        return <ArrowUp className="h-5 w-5 text-green-600" />;
+      case 'spent':
+        return <ArrowDown className="h-5 w-5 text-red-600" />;
+      case 'expired':
+        return <Clock className="h-5 w-5 text-orange-600" />;
+      case 'adjusted':
+        return <Minus className="h-5 w-5 text-blue-600" />;
+      default:
+        return <Award className="h-5 w-5" />;
+    }
+  }
+
+  function getTransactionColor(type: string) {
+    switch (type) {
+      case 'earned':
+        return 'text-green-600';
+      case 'spent':
+        return 'text-red-600';
+      case 'expired':
+        return 'text-orange-600';
+      case 'adjusted':
+        return 'text-blue-600';
+      default:
+        return 'text-muted-foreground';
+    }
+  }
+
+  const nairaValue = Math.floor(Math.abs(transaction.amount) / conversionRate);
+
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-4">
+          <div className="rounded-full bg-muted p-3">
+            {getTransactionIcon(transaction.type)}
+          </div>
+          <div>
+            <p className="font-semibold">{transaction.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {new Date(transaction.createdAt).toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className={`text-lg font-bold ${getTransactionColor(transaction.type)}`}>
+            {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()} pts
+          </p>
+          <p className="text-xs text-muted-foreground">
+            ≈ ₦{nairaValue.toLocaleString()}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Balance: {transaction.balanceAfter.toLocaleString()} pts
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Reward rule card component - shows available reward types
+ */
+function RewardRuleCard({ rule, userId }: { rule: IRewardRule; userId: string }) {
+  function getRewardIcon(rewardType: string) {
+    switch (rewardType) {
+      case 'discount-percentage':
+        return <Percent className="h-5 w-5" />;
+      case 'discount-fixed':
+        return <DollarSign className="h-5 w-5" />;
+      case 'free-item':
+        return <ShoppingBag className="h-5 w-5" />;
+      case 'loyalty-points':
+        return <Star className="h-5 w-5" />;
+      default:
+        return <Gift className="h-5 w-5" />;
+    }
+  }
+
+  function getRewardDescription(rule: IRewardRule): string {
+    const threshold = `₦${rule.spendThreshold.toLocaleString()}`;
+    const probability = rule.probability ? `${rule.probability}% chance` : 'Random chance';
+    
+    switch (rule.rewardType) {
+      case 'discount-percentage':
+        return `Spend ${threshold} or more to get a ${probability} of earning ${rule.rewardValue}% off your next order`;
+      case 'discount-fixed':
+        return `Spend ${threshold} or more to get a ${probability} of earning ₦${rule.rewardValue.toLocaleString()} off your next order`;
+      case 'free-item':
+        return `Spend ${threshold} or more to get a ${probability} of earning a free item`;
+      case 'loyalty-points':
+        return `Spend ${threshold} or more to get a ${probability} of earning ${rule.rewardValue} loyalty points`;
+      default:
+        return `Spend ${threshold} or more to earn rewards`;
+    }
+  }
+
+  function getRewardTitle(rewardType: string, value: number): string {
+    switch (rewardType) {
+      case 'discount-percentage':
+        return `${value}% Discount`;
+      case 'discount-fixed':
+        return `₦${value.toLocaleString()} Off`;
+      case 'free-item':
+        return 'Free Item';
+      case 'loyalty-points':
+        return `${value} Loyalty Points`;
+      default:
+        return 'Reward';
+    }
+  }
+
+  return (
+    <Card className="border-primary/20">
+      <CardContent className="pt-6">
+        <div className="flex items-start gap-3">
+          <div className="rounded-full bg-primary/10 p-3 text-primary">
+            {getRewardIcon(rule.rewardType)}
+          </div>
+          <div className="flex-1">
+            <h4 className="font-semibold mb-1">
+              {getRewardTitle(rule.rewardType, rule.rewardValue)}
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {getRewardDescription(rule)}
+            </p>
+            {rule.validityDays && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Valid for {rule.validityDays} days after earning
+              </p>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

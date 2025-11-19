@@ -75,6 +75,8 @@ const menuItemSchema = new Schema<IMenuItem>(
       ref: 'Inventory',
       required: false,
     },
+    pointsValue: { type: Number, required: false, min: 0 },
+    pointsRedeemable: { type: Boolean, default: false },
   },
   {
     timestamps: true,
