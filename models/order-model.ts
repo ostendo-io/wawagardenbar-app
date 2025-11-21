@@ -75,6 +75,7 @@ const orderSchema = new Schema<IOrder>(
     guestEmail: { type: String, lowercase: true, trim: true },
     guestName: { type: String, trim: true },
     guestPhone: { type: String, trim: true },
+    tabId: { type: Schema.Types.ObjectId, ref: 'Tab' },
     orderType: {
       type: String,
       enum: ['dine-in', 'pickup', 'delivery'] as OrderType[],
@@ -100,6 +101,7 @@ const orderSchema = new Schema<IOrder>(
     tax: { type: Number, default: 0, min: 0 },
     deliveryFee: { type: Number, default: 0, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
+    tipAmount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 },
     paymentId: { type: Schema.Types.ObjectId, ref: 'Payment' },
     paymentReference: { type: String },

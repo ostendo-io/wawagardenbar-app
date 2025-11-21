@@ -4,3 +4,4 @@ export * from './order.interface';
 export * from './payment.interface';
 export * from './reward.interface';
 export * from './inventory.interface';
+export * from './tab.interface';

@@ -23,6 +23,40 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 * **Menu Navigation:** Intuitive category-based Browse.
 * **Shopping Cart:** Real-time order summary.
 * **Order Tracking:** Live status updates.
+* **Customer Profile Management:** (`/profile`)
+    * **Profile Information:**
+      - Full name (first name, last name)
+      - Email address (auto-populated from authentication)
+      - Phone number (with validation)
+      - Profile picture (optional upload)
+    * **Address Management:**
+      - Add multiple delivery addresses
+      - Set default delivery address
+      - Edit/delete saved addresses
+      - Address fields: street address, city, state, postal code, delivery instructions
+      - Quick address selection during checkout
+    * **Order History:**
+      - View all past orders with details
+      - Reorder functionality (one-click reorder)
+      - Order status tracking
+      - Download receipts/invoices
+    * **Preferences:**
+      - Dietary preferences/restrictions
+      - Favorite menu items
+      - Communication preferences (email/SMS notifications)
+    * **Account Security:**
+      - Change email (with verification)
+      - Manage sessions/devices
+      - Account deletion option
+    * **Auto-Save Behavior:**
+      - Email automatically saved on first order (guest or authenticated)
+      - Phone number saved when provided during checkout
+      - Delivery address saved after first delivery order
+      - Guest orders can be claimed by creating account with same email
+    * **Profile Completion:**
+      - Progressive profile completion prompts
+      - Profile completion percentage indicator
+      - Incentives for completing profile (e.g., welcome reward)
 * **Customer Rewards Dashboard:** (`/profile/rewards`)
     * **Statistics Overview:** Display active rewards count, total earned, total savings (₦), and loyalty points balance
     * **Active Rewards Tab:** View all active rewards with:
@@ -83,6 +117,10 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 * **Delivery Orders:** Address input with delivery radius validation.
 * **Special Instructions:** Text field for dietary requirements.
 * **Order Modification:** Ability to edit orders before confirmation.
+* **Tabs for Dine-in (Bar Tabs):**
+  - Customers (dine-in) can open a **tab** for a table, place multiple orders over time, and pay once when closing the tab.
+  - Customers can instead **pay immediately** for a single dine-in order without opening a tab.
+  - Staff can open/manage tabs for tables via the dashboard, attach orders to tabs, and close tabs when customers are ready to pay.
 
 #### 4. Payment Integration
 * **Monnify One-Time Payments** with the following methods:
@@ -197,53 +235,4 @@ The application will be a **mobile-first, responsive web app** that facilitates 
     - One-click template application
     - Customize templates before saving
     - Save custom templates for reuse
-* **Analytics Dashboard:** Sales reports, popular items, peak hours, revenue tracking.
-* **Settings Management:** (`/dashboard/settings`) - Super-admin only
-  - **Fee Configuration:**
-    - Service fee percentage (configurable, default 2%)
-    - Delivery fee base amount (default ₦1,000)
-    - Delivery fee reduced amount (default ₦500)
-    - Free delivery threshold (default ₦2,000)
-    - Minimum order amount (default ₦1,000)
-  - **Tax Configuration:**
-    - Tax percentage (configurable, default 7.5%)
-    - Tax enabled/disabled toggle
-  - **Order Configuration:**
-    - Estimated preparation time (minutes)
-    - Maximum orders per hour
-    - Guest checkout enabled/disabled
-  - **Order Type Toggles:**
-    - Enable/disable dine-in orders
-    - Enable/disable pickup orders
-    - Enable/disable delivery orders
-    - Delivery radius (kilometers)
-  - **Business Hours:**
-    - Configurable hours for each day of the week
-    - Open/close times
-    - Closed day toggle
-  - **Contact Information:**
-    - Public contact email
-    - Public contact phone
-    - Restaurant address
-  - **Features:**
-    - Real-time updates (1-minute cache)
-    - Audit trail for all changes
-    - Form validation with Zod
-    - Tabbed interface for organization
-    - All settings stored in MongoDB
-    - No code deployment required for changes
-
----
-
-### Technical & Architectural Requirements
-
-#### 1. General Architecture & Code Standards
-* **Architecture:** The project must use the **Next.js App Router**.
-* **Code Style:** Follow the **Airbnb Style Guide**.
-* **Principles:** Adhere to **S.O.L.I.D** principles.
-* **TypeScript:** The entire codebase must be in TypeScript.
-    * Prefer **interfaces over types**.
-    * **Avoid `any`**.
-    * All variables, functions (parameters and returns) must be explicitly typed.
-* **Exports:** Use **named exports** for components. One export per file.
-* **Naming:
+* **Analytics 

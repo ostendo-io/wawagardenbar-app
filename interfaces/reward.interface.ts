@@ -27,6 +27,7 @@ export interface IReward {
   userId: Types.ObjectId;
   ruleId: Types.ObjectId;
   orderId: Types.ObjectId;
+  tabId?: Types.ObjectId;
   rewardType: RewardType;
   rewardValue: number;
   freeItemId?: Types.ObjectId;

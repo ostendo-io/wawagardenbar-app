@@ -1,0 +1,44 @@
+after items are added to the cart and proceed to checkout is selected
+
+Customer info page is displayed and customer selects next 
+
+Order details will then be displayed where the customer can decide if they want to dine-in, takeaway or pickup
+
+1. Customer selects Dine-in: 
+
+Customer enters table number
+customer enters any special instructions
+Customer Selects Next
+
+If there is no open tab for the customer
+Customer is shown the option to "Pay Now" or "Open a Tab"
+
+    if Customer selects "Open a "Tab" then Next
+    A new Tab is created and the new order is added to it
+
+    if Customer selects "Pay Now" then Next
+    The "Add a tip page is displayed" and customer can add a tip, then customer selects Next
+    The select a payment method is displayed, customer selects a payment method then selects proceed to payment to complete the checkout process
+
+if there is an open tab for the customer
+Customer only has the option to add this new order to the open tab and customer selects next
+
+    Orders is created and added to existing tab, the tab is displayed with the previous orders and the newly created tab displayed confirming it has been added to the open tab  
+
+Customer can add a new order to an existing open tab, by opening the tab and selecting add new order to tab which takes the customer to menu page with the message add items to shoiing cart.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Customer selects Next
+
+Tab is opened for the customer

@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { UtensilsCrossed, Package, Truck, MapPin, Clock } from 'lucide-react';
 
 interface OrderDetailsStepProps {
@@ -191,6 +192,30 @@ export function OrderDetailsStep({ form }: OrderDetailsStepProps) {
                   />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="saveAddress"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 touch-manipulation">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-1 h-5 w-5"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none flex-1">
+                  <FormLabel className="cursor-pointer">
+                    Save this address for future orders
+                  </FormLabel>
+                  <FormDescription>
+                    We'll pre-fill this address next time you order delivery
+                  </FormDescription>
+                </div>
               </FormItem>
             )}
           />

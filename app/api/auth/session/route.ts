@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     if (session.userId && !session.isGuest) {
       await connectDB();
       const user = await UserModel.findById(session.userId).select(
-        'name email emailVerified role totalSpent rewardsEarned orderCount'
+        'firstName lastName name email emailVerified role totalSpent rewardsEarned totalOrders'
       );
 
       if (!user) {
@@ -28,16 +28,21 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
         return NextResponse.json(defaultSession);
       }
 
+      // Compute full name from firstName and lastName
+      const fullName = user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.name || user.email.split('@')[0];
+
       return NextResponse.json({
         isLoggedIn: true,
         userId: user._id.toString(),
         email: user.email,
-        name: user.name,
+        name: fullName,
         emailVerified: user.emailVerified,
         role: user.role,
         totalSpent: user.totalSpent,
         rewardsEarned: user.rewardsEarned,
-        orderCount: user.orderCount,
+        orderCount: user.totalOrders,
         isGuest: false,
       });
     }

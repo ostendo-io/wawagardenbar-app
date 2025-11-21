@@ -46,7 +46,7 @@ const systemSettingsSchema = new Schema<ISystemSettings>(
   }
 );
 
-systemSettingsSchema.index({ key: 1 });
+// key index is already created via unique: true in schema definition
 
 const SystemSettingsModel: Model<ISystemSettings> =
   mongoose.models.SystemSettings ||

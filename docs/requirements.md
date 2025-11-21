@@ -113,6 +113,10 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 * **Delivery Orders:** Address input with delivery radius validation.
 * **Special Instructions:** Text field for dietary requirements.
 * **Order Modification:** Ability to edit orders before confirmation.
+* **Tabs for Dine-in (Bar Tabs):**
+  - Customers (dine-in) can open a **tab** for a table, place multiple orders over time, and pay once when closing the tab.
+  - Customers can instead **pay immediately** for a single dine-in order without opening a tab.
+  - Staff can open/manage tabs for tables via the dashboard, attach orders to tabs, and close tabs when customers are ready to pay.
 
 #### 4. Payment Integration
 * **Monnify One-Time Payments** with the following methods:
@@ -381,6 +385,7 @@ The application will be a **mobile-first, responsive web app** that facilitates 
   - Order configuration (prep time, max orders/hour, guest checkout)
   - Order type toggles (dine-in, pickup, delivery enabled flags)
   - Delivery radius
+  - Tip / gratuity configuration (enable/disable tips, preset percentage options)
   - Business hours (per day with open/close times and closed flag)
   - Contact information (email, phone, address)
   - Metadata (updatedBy, updatedByEmail, timestamps)
@@ -418,10 +423,14 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 4.  For delivery orders, user enters delivery address.
 5.  **Auto-save behavior:**
     - Email saved to guest profile (or user account if logged in).
-    - Phone number saved to profile.
-    - Delivery address saved to addresses array (if delivery order).
+    - Phone number saved to profile when provided during checkout.
+    - Delivery address saved to addresses array after first delivery order.
 6.  Complete payment $\rightarrow$ Order confirmed.
 7.  **Guest conversion prompt:** After order, show banner: "Create account to track orders and earn rewards" with one-click signup.
+8.  **Profile population on first login:**
+    - When user first logs in using email, basic profile is created with email only.
+    - Profile is progressively enhanced during checkout (name, phone, address).
+    - Next checkout uses saved profile data to pre-populate checkout form.
 
 #### Profile Management Flow
 1.  **Access Profile:**
@@ -451,9 +460,18 @@ The application will be a **mobile-first, responsive web app** that facilitates 
 #### Dine-in Order Flow
 1.  Open website $\rightarrow$ Select "Dine-in" $\rightarrow$ Scan QR or enter table.
 2.  Browse menu $\rightarrow$ Add items to cart.
-3.  Review order $\rightarrow$ Select payment method.
-4.  Complete payment $\rightarrow$ Receive confirmation.
-5.  Track order status $\rightarrow$ Food delivered to table.
+3.  Choose whether to **open/use a tab** for the table or **pay immediately** for this order only.
+4.  If paying immediately (no tab): Review order $\rightarrow$ Select payment method $\rightarrow$ (Optional) add tip $\rightarrow$ Complete payment $\rightarrow$ Receive confirmation.
+5.  If using a tab: 
+    - **First order on tab:** Checkout form presented to collect customer details (name, email, phone).
+    - Add the order to the open tab (or open a new tab) without immediate payment.
+    - **Subsequent orders on same tab:** No checkout form required, orders directly added to tab.
+    - Repeat browsing/ordering as needed without re-entering customer details.
+6.  When ready to pay tab (closing tab): 
+    - Open tab summary $\rightarrow$ Review tab total (including all orders).
+    - **Checkout form presented once** to confirm/update payment details.
+    - (Optional) add tip $\rightarrow$ Select payment method $\rightarrow$ Complete payment $\rightarrow$ Receive confirmation.
+7.  Track order status $\rightarrow$ Food delivered to table.
 
 #### Delivery Order Flow
 1.  Open website $\rightarrow$ Select "Delivery" $\rightarrow$ Enter/confirm address.

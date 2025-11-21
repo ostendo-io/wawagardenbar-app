@@ -5,7 +5,9 @@ import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
+import TabModel from '@/models/tab-model';
 import { PaymentService } from '@/services/payment-service';
+import { TabService, UserService } from '@/services';
 import {
   PaymentInitializationResult,
   PaymentVerificationResult,
@@ -25,10 +27,17 @@ export interface CreateOrderInput {
     address: string;
     landmark?: string;
     instructions?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
   };
   pickupTime?: string;
   tableNumber?: string;
   specialInstructions?: string;
+  tabId?: string;
+  tipAmount?: number;
+  savePhone?: boolean;
+  saveAddress?: boolean;
 }
 
 export interface InitializePaymentInput {
@@ -47,6 +56,13 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   message?: string;
   data?: { orderId: string };
 }> {
+  console.log('🚀 createOrder called at:', new Date().toISOString(), {
+    orderType: input.orderType,
+    items: input.items.map(i => `${i.quantity}x ${i.name}`),
+    customerEmail: input.customerInfo.email,
+    tabId: input.tabId,
+  });
+  
   try {
     await connectDB();
 
@@ -63,8 +79,29 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     
     const { serviceFee, deliveryFee, tax, total } = totals;
 
-    // Generate order number
-    const orderNumber = `WGB${Date.now().toString().slice(-8)}`;
+    // Generate order number with timestamp
+    const timestamp = Date.now();
+    const orderNumber = `WGB${timestamp.toString().slice(-8)}`;
+    
+    // Check for duplicate order in the last 5 seconds
+    const fiveSecondsAgo = new Date(Date.now() - 5000);
+    const recentDuplicate = await Order.findOne({
+      ...(userId ? { userId } : {
+        guestEmail: input.customerInfo.email,
+      }),
+      createdAt: { $gte: fiveSecondsAgo },
+      'items.name': { $in: input.items.map(item => item.name) },
+      'items.quantity': { $in: input.items.map(item => item.quantity) },
+      subtotal,
+    });
+    
+    if (recentDuplicate) {
+      console.log('⚠️ Duplicate order detected, returning existing:', recentDuplicate.orderNumber);
+      return {
+        success: true,
+        data: { orderId: recentDuplicate._id.toString() },
+      };
+    }
 
     // Calculate estimated wait time (in minutes)
     let estimatedWaitTime = 30; // Default 30 minutes
@@ -96,11 +133,13 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       serviceFee,
       tax,
       deliveryFee,
-      total,
+      tipAmount: input.tipAmount || 0,
+      total: total + (input.tipAmount || 0),
       estimatedWaitTime,
       specialInstructions: input.specialInstructions,
       status: 'pending',
       paymentStatus: 'pending',
+      ...(input.tabId ? { tabId: input.tabId } : {}),
     };
 
     // Add order-type-specific details
@@ -128,6 +167,46 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // Create order
     const order = await Order.create(orderData);
+    
+    console.log('✅ Order created successfully:', {
+      orderNumber: order.orderNumber,
+      orderId: order._id.toString(),
+      items: order.items.map(i => `${i.quantity}x ${i.name}`),
+      total: order.total,
+    });
+
+    // If tabId provided, add order to tab
+    if (input.tabId) {
+      await TabService.addOrderToTab(input.tabId, order._id.toString());
+    }
+
+    // Update user profile if logged in and save flags are set
+    if (userId && (input.savePhone || input.saveAddress)) {
+      try {
+        const nameParts = input.customerInfo.name.split(' ');
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ');
+
+        await UserService.updateProfileFromCheckout({
+          userId,
+          firstName,
+          lastName,
+          phone: input.customerInfo.phone,
+          address: input.deliveryInfo ? {
+            streetAddress: input.deliveryInfo.address,
+            city: input.deliveryInfo.city || 'Lagos',
+            state: input.deliveryInfo.state || 'Lagos',
+            postalCode: input.deliveryInfo.postalCode || '100001',
+            deliveryInstructions: input.deliveryInfo.instructions,
+          } : undefined,
+          savePhone: input.savePhone,
+          saveAddress: input.saveAddress && !!input.deliveryInfo,
+        });
+      } catch (profileError) {
+        // Log error but don't fail the order
+        console.error('Error updating profile from checkout:', profileError);
+      }
+    }
 
     return {
       success: true,
@@ -229,8 +308,12 @@ export async function verifyPayment(
 
     const paymentData = response.responseBody;
 
-    // Update order
+    // Try to find order first
     const order = await Order.findOne({ paymentReference });
+    
+    // If no order found, try to find tab
+    const tab = !order ? await TabModel.findOne({ paymentReference }) : null;
+
     if (order) {
       const statusMap: Record<string, 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'> = {
         'PAID': 'paid',
@@ -252,6 +335,19 @@ export async function verifyPayment(
       }
 
       await order.save();
+    } else if (tab) {
+      // Handle tab payment
+      if (PaymentService.isPaymentSuccessful(paymentData.paymentStatus)) {
+        await TabService.markTabPaid(
+          tab._id.toString(),
+          paymentReference,
+          paymentData.transactionReference
+        );
+      } else if (paymentData.paymentStatus === 'FAILED') {
+        tab.paymentStatus = 'failed';
+        tab.status = 'open'; // Reopen tab if payment failed
+        await tab.save();
+      }
     }
 
     return {
@@ -334,6 +430,91 @@ export async function getOrder(orderId: string): Promise<{
     return {
       success: false,
       message: 'Failed to get order details',
+    };
+  }
+}
+
+/**
+ * Initialize payment for a tab
+ */
+export async function initializeTabPayment(params: {
+  tabId: string;
+  tipAmount?: number;
+  customerName: string;
+  customerEmail: string;
+  paymentMethods: PaymentMethod[];
+}): Promise<PaymentInitializationResult> {
+  try {
+    await connectDB();
+
+    // Prepare tab for checkout
+    const { tab } = await TabService.prepareTabForCheckout(
+      params.tabId,
+      params.tipAmount || 0
+    );
+
+    if (!tab) {
+      return {
+        success: false,
+        message: 'Tab not found',
+      };
+    }
+
+    if (tab.status === 'closed') {
+      return {
+        success: false,
+        message: 'Tab is already closed',
+      };
+    }
+
+    // Generate payment reference
+    const paymentReference = PaymentService.generatePaymentReference(params.tabId);
+
+    // Initialize payment with Monnify
+    const response = await PaymentService.initializePayment({
+      amount: tab.total,
+      customerName: params.customerName,
+      customerEmail: params.customerEmail,
+      paymentReference,
+      paymentDescription: `Tab #${tab.tabNumber}`,
+      paymentMethods: params.paymentMethods,
+      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/orders/tabs/${params.tabId}?payment=success`,
+      metadata: {
+        tabId: params.tabId,
+        tableNumber: tab.tableNumber,
+      },
+    });
+
+    if (!response.requestSuccessful) {
+      return {
+        success: false,
+        message: response.responseMessage || 'Failed to initialize payment',
+      };
+    }
+
+    // Update tab with payment reference
+    const tabDoc = await TabModel.findById(params.tabId);
+    if (tabDoc) {
+      tabDoc.paymentReference = paymentReference;
+      tabDoc.transactionReference = response.responseBody.transactionReference;
+      tabDoc.status = 'settling';
+      await tabDoc.save();
+    }
+
+    return {
+      success: true,
+      data: {
+        transactionReference: response.responseBody.transactionReference,
+        paymentReference,
+        checkoutUrl: response.responseBody.checkoutUrl,
+        enabledPaymentMethods: response.responseBody.enabledPaymentMethod,
+      },
+    };
+  } catch (error) {
+    console.error('Error initializing tab payment:', error);
+    return {
+      success: false,
+      message: 'Failed to initialize tab payment. Please try again.',
     };
   }
 }

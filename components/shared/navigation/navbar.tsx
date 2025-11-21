@@ -31,7 +31,7 @@ interface NavLink {
 const baseNavLinks: NavLink[] = [
   { href: '/', label: 'Home' },
   { href: '/menu', label: 'Menu' },
-  { href: '/orders', label: 'Orders' },
+  { href: '/orders', label: 'Orders/Tabs' },
   { href: '/rewards', label: 'Rewards' },
 ];
 
@@ -143,7 +143,7 @@ export function Navbar() {
                       <DropdownMenuItem asChild>
                         <Link href="/orders">
                           <ShoppingCart className="mr-2 h-4 w-4" />
-                          My Orders
+                          My Orders/Tabs
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />

@@ -114,7 +114,7 @@ const userSchema = new Schema<IUser>(
 // Indexes
 userSchema.index({ sessionToken: 1 });
 userSchema.index({ createdAt: -1 });
-userSchema.index({ email: 1 });
+// email index is already created via unique: true in schema definition
 userSchema.index({ phone: 1 });
 userSchema.index({ 'addresses.isDefault': 1 });
 

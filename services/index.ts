@@ -9,3 +9,5 @@ export { default as InventoryService } from './inventory-service';
 export { default as SettingsService } from './settings-service';
 export { SystemSettingsService } from './system-settings-service';
 export { PointsService } from './points-service';
+export { TabService } from './tab-service';
+export { UserService } from './user-service';

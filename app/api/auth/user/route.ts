@@ -32,10 +32,17 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Compute full name from firstName and lastName
+    const fullName = user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user.name || user.email.split('@')[0];
+
     return NextResponse.json({
       user: {
         id: user._id.toString(),
-        name: user.name,
+        name: fullName,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         emailVerified: user.emailVerified,
         role: user.role,
@@ -44,7 +51,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
         paymentMethods: user.paymentMethods,
         totalSpent: user.totalSpent,
         rewardsEarned: user.rewardsEarned,
-        orderCount: user.orderCount,
+        orderCount: user.totalOrders,
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt,
       },

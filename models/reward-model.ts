@@ -18,6 +18,10 @@ const rewardSchema = new Schema<IReward>(
       ref: 'Order',
       required: true,
     },
+    tabId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Tab',
+    },
     rewardType: {
       type: String,
       enum: [

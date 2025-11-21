@@ -58,12 +58,14 @@ export interface IOrder {
   guestPhone?: string;
   orderType: OrderType;
   status: OrderStatus;
+  tabId?: Types.ObjectId;
   items: IOrderItem[];
   subtotal: number;
   serviceFee: number;
   tax: number;
   deliveryFee: number;
   discount: number;
+  tipAmount: number;
   total: number;
   paymentId?: Types.ObjectId;
   paymentReference?: string;
