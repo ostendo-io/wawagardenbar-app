@@ -72,7 +72,7 @@ export class TabService {
       .populate('orders')
       .lean();
 
-    return tab;
+    return tab ? JSON.parse(JSON.stringify(tab)) : null;
   }
 
   /**
@@ -88,7 +88,7 @@ export class TabService {
       .populate('orders')
       .lean();
 
-    return tab;
+    return tab ? JSON.parse(JSON.stringify(tab)) : null;
   }
 
   /**
@@ -99,7 +99,7 @@ export class TabService {
 
     const tab = await TabModel.findById(tabId).populate('orders').lean();
 
-    return tab;
+    return tab ? JSON.parse(JSON.stringify(tab)) : null;
   }
 
   /**

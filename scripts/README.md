@@ -1,6 +1,6 @@
-# Database Seed Scripts
+# Database Scripts
 
-This directory contains scripts for seeding the database with test data.
+This directory contains scripts for seeding and managing the database.
 
 ## Menu Seeding
 
@@ -90,3 +90,49 @@ To add more items or modify existing ones, edit the `menuItems` array in `/scrip
 **Connection timeout**
 - Check your MongoDB connection string
 - Ensure your IP is whitelisted in MongoDB Atlas (if using cloud)
+
+## User Data Deletion
+
+### Usage
+
+To delete all orders and tabs for a specific user:
+
+```bash
+npm run delete:user-data <email>
+```
+
+**Example:**
+```bash
+npm run delete:user-data adekunle@gmail.com
+```
+
+### What it does
+
+The script will:
+1. Find the user by email address
+2. Delete all orders associated with the user (both registered and guest orders)
+3. Delete all tabs associated with the user (both registered and guest tabs)
+4. Provide a summary of deleted items
+
+### Safety Features
+
+- Validates that the user exists before proceeding
+- Shows a summary of what will be deleted before execution
+- Handles both registered users (by userId) and guest orders (by email)
+- Properly closes database connection
+
+### Output Example
+
+```
+🗑️  Deleting data for user: adekunle@gmail.com (ID: 507f1f77bcf86cd799439011)
+📦 Deleted 5 orders
+📋 Deleted 2 tabs
+📦 Deleted 3 guest orders with email adekunle@gmail.com
+📋 Deleted 1 guest tabs with email adekunle@gmail.com
+
+✅ User data deletion completed successfully!
+
+📊 Summary for adekunle@gmail.com:
+   - Orders: 5 (registered) + 3 (guest)
+   - Tabs: 2 (registered) + 1 (guest)
+```

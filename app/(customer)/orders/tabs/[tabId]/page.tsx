@@ -125,7 +125,9 @@ export default async function TabDetailsPage({ params }: TabDetailsPageProps) {
                       <div className="space-y-3">
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-semibold">Order #{order.orderNumber}</p>
+                            <Link href={`/orders/${order._id}`} className="hover:underline">
+                              <p className="font-semibold text-primary">Order #{order.orderNumber}</p>
+                            </Link>
                             <p className="text-sm text-muted-foreground">
                               {new Date(order.createdAt).toLocaleString()}
                             </p>

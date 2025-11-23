@@ -7,7 +7,7 @@ import { OrderStats } from '@/components/features/admin/order-stats';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ChefHat, BarChart3 } from 'lucide-react';
+import { ChefHat, BarChart3, Receipt } from 'lucide-react';
 
 /**
  * Loading skeletons
@@ -71,6 +71,12 @@ export default async function OrdersPage() {
             <Button variant="outline">
               <BarChart3 className="h-4 w-4 mr-2" />
               Analytics
+            </Button>
+          </Link>
+          <Link href="/dashboard/orders/tabs">
+            <Button variant="outline">
+              <Receipt className="h-4 w-4 mr-2" />
+              Tabs Display
             </Button>
           </Link>
           <Link href="/dashboard/kitchen">

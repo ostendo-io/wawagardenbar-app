@@ -52,6 +52,7 @@ export interface IDineInDetails {
 export interface IOrder {
   _id: Types.ObjectId;
   orderNumber: string;
+  idempotencyKey: string;
   userId?: Types.ObjectId;
   guestEmail?: string;
   guestName?: string;

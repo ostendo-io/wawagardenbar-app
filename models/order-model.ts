@@ -71,6 +71,11 @@ const orderSchema = new Schema<IOrder>(
       required: true,
       unique: true,
     },
+    idempotencyKey: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
     guestEmail: { type: String, lowercase: true, trim: true },
     guestName: { type: String, trim: true },
@@ -171,6 +176,7 @@ orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index({ status: 1, orderType: 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ guestEmail: 1 });
+orderSchema.index({ idempotencyKey: 1 });
 
 orderSchema.pre('save', function preSave(next) {
   if (this.isNew) {

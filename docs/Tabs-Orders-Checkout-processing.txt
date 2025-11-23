@@ -1,15 +1,14 @@
 Review existing implementation of customer orders, rewards and checkout processing and create a tabs-and-orders-system-spec.md file detailing requirements, modifications to the existing implementation and implemetation details required to deliver these new requirementstab can be opened by staff and customers once a tab is opened orders can be placed on the tab
 
 after customer select dine-in as part of the order creation process
-    customer should be able to open a new tab if there is no existing open tab and add an order to it 
-    or add an order to an existing tab if they already have an open tab
-    or complete an order and pay without opening a tab
+    customer should only be able to open a new tab if there is no existing open tab 
+    customers should be able to add an order to an existing tab if they already have an open tab
+    customers should be able to complete an order and pay without opening a tab. If there is an existing tab customers should only have the option to add this new order to the existing tab or be asked to close the existing tab before they can create a different order
 
 Once a customer has opened a tab and added items to the basket they can complete the order without completing payment. The tab that the order is associated with will remain open.
 
-There will be a tabs button similar kitchen display in the "dashboard > orders" where staff can view all open tabs and table numbers and the orders associated with them.
 
-Staff will be able to open a tab and create an order for it and continue to add orders to it till the customer decides they want to close the tab and pay. Then the staff can complete checkout and process payment for the tab This will update status of the tab to paid and close the tab.
+Staff will be able to open a tab and create an order for that tab and continue to add orders to that same tab till the customer decides they want to close the tab and pay. Then the staff can complete checkout and process payment for the tab. This will update status of the tab to paid and close the tab.
 
 The order will be displayed in the dashboard orders tab as usual and will be able to be processed by staff.
 
@@ -17,5 +16,28 @@ The customer > orders page will display orders as it currently does or it will d
 
 Rewards will be applied to the tab as they are to orders.
 
+
+
+
+There will be a tabs button similar the "kitchen display" in the "dashboard > orders" where staff can view all open tabs and table numbers and the orders associated with those tabs.
+staff will be able to select a tab to close it.
+
+
+from the tab details page there should be a link on each order in the tab to view details of the order  
+
+from payment options page the link "View / Close Tab" should not result in the new order being added to the tab but the link should take the user to the orders/tabs page with the tab opened.
+
+Payment Options
+Choose how you'd like to handle payment for this order
+
+You have an open tab
+Please add this order to your existing tab, or close it first to start a new order.
+
+View / Close Tab
+
+
 remove rundundant code and update the existing implementation to support tabs and orders
+
+
+the payment options page is not displayed long enough for the customer to select enter/next when there is an open tab
 

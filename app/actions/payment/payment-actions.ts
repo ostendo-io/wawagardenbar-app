@@ -38,6 +38,7 @@ export interface CreateOrderInput {
   tipAmount?: number;
   savePhone?: boolean;
   saveAddress?: boolean;
+  idempotencyKey: string;
 }
 
 export interface InitializePaymentInput {
@@ -61,10 +62,21 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     items: input.items.map(i => `${i.quantity}x ${i.name}`),
     customerEmail: input.customerInfo.email,
     tabId: input.tabId,
+    idempotencyKey: input.idempotencyKey,
   });
   
   try {
     await connectDB();
+    
+    // Check for existing order with same idempotency key
+    const existingOrder = await Order.findOne({ idempotencyKey: input.idempotencyKey });
+    if (existingOrder) {
+      console.log('🔄 Returning existing order for idempotency key:', input.idempotencyKey);
+      return {
+        success: true,
+        data: { orderId: existingOrder._id.toString() },
+      };
+    }
 
     // Check if user is logged in
     const cookieStore = await cookies();
@@ -82,26 +94,6 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     // Generate order number with timestamp
     const timestamp = Date.now();
     const orderNumber = `WGB${timestamp.toString().slice(-8)}`;
-    
-    // Check for duplicate order in the last 5 seconds
-    const fiveSecondsAgo = new Date(Date.now() - 5000);
-    const recentDuplicate = await Order.findOne({
-      ...(userId ? { userId } : {
-        guestEmail: input.customerInfo.email,
-      }),
-      createdAt: { $gte: fiveSecondsAgo },
-      'items.name': { $in: input.items.map(item => item.name) },
-      'items.quantity': { $in: input.items.map(item => item.quantity) },
-      subtotal,
-    });
-    
-    if (recentDuplicate) {
-      console.log('⚠️ Duplicate order detected, returning existing:', recentDuplicate.orderNumber);
-      return {
-        success: true,
-        data: { orderId: recentDuplicate._id.toString() },
-      };
-    }
 
     // Calculate estimated wait time (in minutes)
     let estimatedWaitTime = 30; // Default 30 minutes
@@ -139,6 +131,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       specialInstructions: input.specialInstructions,
       status: 'pending',
       paymentStatus: 'pending',
+      idempotencyKey: input.idempotencyKey,
       ...(input.tabId ? { tabId: input.tabId } : {}),
     };
 
@@ -212,7 +205,25 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       success: true,
       data: { orderId: order._id.toString() },
     };
-  } catch (error) {
+  } catch (error: any) {
+    // Handle duplicate idempotency key error specifically
+    if (error.code === 11000 && error.keyPattern?.idempotencyKey) {
+      console.log('⚠️ Duplicate idempotency key detected via DB constraint:', input.idempotencyKey);
+      
+      // Try to find the existing order
+      try {
+        const existingOrder = await Order.findOne({ idempotencyKey: input.idempotencyKey });
+        if (existingOrder) {
+          return {
+            success: true,
+            data: { orderId: existingOrder._id.toString() },
+          };
+        }
+      } catch (findError) {
+        console.error('Error finding existing duplicate order:', findError);
+      }
+    }
+
     console.error('Error creating order:', error);
     return {
       success: false,

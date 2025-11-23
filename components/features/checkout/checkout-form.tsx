@@ -75,6 +75,8 @@ export function CheckoutForm() {
   const [existingTab, setExistingTab] = useState<ITab | null>(null);
   const [steps, setSteps] = useState(baseSteps);
   const [isPreFilled, setIsPreFilled] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>('');
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -120,6 +122,7 @@ export function CheckoutForm() {
         const result = await getOpenTabForUserAction();
         if (result.success && result.data?.tab) {
           setExistingTab(result.data.tab);
+          form.setValue('useTab', 'existing-tab');
         }
       }
     }
@@ -129,8 +132,17 @@ export function CheckoutForm() {
   // Adjust steps based on order type and tab choice
   useEffect(() => {
     if (orderType === 'dine-in') {
-      // Include all steps for dine-in
-      setSteps(baseSteps);
+      if (useTab === 'new-tab' || useTab === 'existing-tab') {
+        // If using a tab, skip Tip and Payment steps
+        setSteps([
+          baseSteps[0], // Customer Info
+          baseSteps[1], // Order Details
+          baseSteps[2], // Tab Options
+        ]);
+      } else {
+        // For Pay Now, include all steps
+        setSteps(baseSteps);
+      }
     } else {
       // For pickup/delivery, skip tab options step
       setSteps([
@@ -140,7 +152,7 @@ export function CheckoutForm() {
         baseSteps[4], // Payment
       ]);
     }
-  }, [orderType]);
+  }, [orderType, useTab]);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -149,7 +161,14 @@ export function CheckoutForm() {
     }
   }, [items.length, router]);
 
-  // Reset submission state when component mounts/unmounts
+  // Generate idempotency key when component mounts
+  useEffect(() => {
+    // Generate a unique key for this checkout session
+    const key = `checkout-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    setIdempotencyKey(key);
+  }, []);
+
+  // Reset submission state when component unmounts
   useEffect(() => {
     return () => {
       setHasSubmitted(false);
@@ -162,7 +181,12 @@ export function CheckoutForm() {
   }
 
   async function onSubmit(data: CheckoutFormData) {
-    // Prevent double submission
+    // Prevent submission during navigation or double submission
+    if (isNavigating) {
+      console.log('Preventing submission during navigation');
+      return;
+    }
+    
     if (isSubmitting || hasSubmitted) {
       console.log('Preventing duplicate submission:', { isSubmitting, hasSubmitted });
       return;
@@ -224,6 +248,7 @@ export function CheckoutForm() {
         tipAmount: data.tipAmount || 0,
         savePhone: data.savePhone,
         saveAddress: data.saveAddress,
+        idempotencyKey,
       });
 
       if (!orderResult.success || !orderResult.data) {
@@ -323,6 +348,16 @@ export function CheckoutForm() {
   }
 
   async function handleNext() {
+    console.log('handleNext called', { currentStep, stepsLength: steps.length, isNavigating });
+    
+    // Prevent rapid consecutive navigation
+    if (isNavigating) {
+      console.log('Navigation already in progress, ignoring');
+      return;
+    }
+
+    setIsNavigating(true);
+
     // Validate current step before proceeding
     let fieldsToValidate: (keyof CheckoutFormData)[] = [];
     
@@ -357,8 +392,20 @@ export function CheckoutForm() {
     // Trigger validation for current step fields
     const isValid = fieldsToValidate.length === 0 || await form.trigger(fieldsToValidate);
     
+    console.log('Validation result', { isValid, currentStep, stepsLength: steps.length });
+    
     if (isValid && currentStep < steps.length) {
+      console.log('Advancing to next step', { from: currentStep, to: currentStep + 1 });
       setCurrentStep(currentStep + 1);
+      // Reset navigation flag after a brief delay to ensure state update completes
+      setTimeout(() => {
+        console.log('Navigation lock released');
+        setIsNavigating(false);
+      }, 300);
+    } else {
+      console.log('Not advancing - validation failed or at last step');
+      // Reset immediately if validation failed or at last step
+      setIsNavigating(false);
     }
   }
 
@@ -407,7 +454,36 @@ export function CheckoutForm() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form 
+          onSubmit={form.handleSubmit(onSubmit)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              console.log('Enter key pressed', { currentStep, stepsLength: steps.length, isNavigating });
+              
+              // IMMEDIATELY stop propagation to prevent Enter from reaching buttons
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // If navigation is in progress, ignore this key press
+              if (isNavigating) {
+                console.log('Navigation in progress, ignoring Enter key');
+                return;
+              }
+              
+              // If not on the last step, advance to next
+              if (currentStep < steps.length) {
+                console.log('Calling handleNext to advance step');
+                handleNext();
+              } else {
+                console.log('On last step, manually triggering form submission');
+                // Manually trigger form submission only if not navigating
+                if (!isNavigating) {
+                  form.handleSubmit(onSubmit)();
+                }
+              }
+            }
+          }}
+        >
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Main Form */}
             <div className="lg:col-span-2">
@@ -459,7 +535,7 @@ export function CheckoutForm() {
                     ) : (
                       <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isSubmitting ? 'Processing...' : 'Proceed to Payment'}
+                        {isSubmitting ? 'Processing...' : (orderType === 'dine-in' && useTab !== 'pay-now' ? 'Add to Tab' : 'Proceed to Payment')}
                       </Button>
                     )}
                   </div>
