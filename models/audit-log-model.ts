@@ -24,6 +24,7 @@ const auditLogSchema = new Schema<IAuditLog>(
         'reward.update',
         'reward.delete',
         'settings.update',
+        'tab.manual_payment',
         'admin.login',
         'admin.logout',
       ],

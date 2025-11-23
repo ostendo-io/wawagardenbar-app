@@ -229,6 +229,144 @@ export async function prepareTabForCheckoutAction(params: {
 }
 
 /**
+ * Get filtered tabs for user (customer)
+ */
+export async function getFilteredTabsAction(filters: {
+  statuses?: string[];
+  startDate?: string;
+  endDate?: string;
+}): Promise<ActionResult<{ tabs: ITab[] }>> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const userId = session.userId;
+
+    if (!userId) {
+      return {
+        success: false,
+        error: 'User must be logged in',
+      };
+    }
+
+    const tabs = await TabService.listTabsWithFilters(userId, {
+      statuses: filters.statuses,
+      startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+      endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+    });
+
+    return {
+      success: true,
+      data: { tabs },
+    };
+  } catch (error) {
+    console.error('Error getting filtered tabs:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get tabs',
+    };
+  }
+}
+
+/**
+ * Get filtered tabs for dashboard (admin/staff)
+ */
+export async function getDashboardFilteredTabsAction(filters: {
+  statuses?: string[];
+  startDate?: string;
+  endDate?: string;
+}): Promise<ActionResult<{ tabs: ITab[] }>> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
+    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+      return {
+        success: false,
+        error: 'Unauthorized',
+      };
+    }
+
+    const tabs = await TabService.listAllTabsWithFilters({
+      statuses: filters.statuses,
+      startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+      endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+    });
+
+    return {
+      success: true,
+      data: { tabs },
+    };
+  } catch (error) {
+    console.error('Error getting filtered tabs:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get tabs',
+    };
+  }
+}
+
+/**
+ * Complete tab payment manually (admin)
+ * For cash, transfer, or POS payments
+ */
+export async function completeTabPaymentManuallyAction(params: {
+  tabId: string;
+  paymentType: 'cash' | 'transfer' | 'card';
+  paymentReference: string;
+  comments?: string;
+}): Promise<ActionResult<{ tab: ITab }>> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
+    // Check if user is staff/admin
+    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+      return {
+        success: false,
+        error: 'Unauthorized. Only admins can process manual payments.',
+      };
+    }
+
+    if (!params.tabId) {
+      return {
+        success: false,
+        error: 'Tab ID is required',
+      };
+    }
+
+    if (!params.paymentReference) {
+      return {
+        success: false,
+        error: 'Payment reference is required',
+      };
+    }
+
+    const tab = await TabService.completeTabPaymentManually({
+      tabId: params.tabId,
+      paymentType: params.paymentType,
+      paymentReference: params.paymentReference,
+      comments: params.comments,
+      processedBy: session.userId,
+    });
+
+    revalidatePath('/dashboard/orders/tabs');
+    revalidatePath(`/dashboard/orders/tabs/${params.tabId}`);
+
+    return {
+      success: true,
+      message: 'Tab payment completed successfully',
+      data: { tab },
+    };
+  } catch (error) {
+    console.error('Error completing tab payment:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to complete payment',
+    };
+  }
+}
+
+/**
  * Close tab without payment (cancel)
  */
 export async function closeTabAction(

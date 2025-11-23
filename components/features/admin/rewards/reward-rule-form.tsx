@@ -5,12 +5,15 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Percent, DollarSign, Gift, Star } from 'lucide-react';
+import { DateRange } from 'react-day-picker';
+import { addYears } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { MultiDateRangePicker } from '@/components/ui/multi-date-range-picker';
 import {
   Select,
   SelectContent,
@@ -44,6 +47,10 @@ const formSchema = z.object({
   validityDays: z.coerce.number().int().positive('Must be positive'),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
+  campaignDates: z.array(z.object({
+    from: z.string(),
+    to: z.string(),
+  })).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -113,6 +120,23 @@ export function RewardRuleForm({
   const [probabilityValue, setProbabilityValue] = useState(
     initialData?.probability ? initialData.probability * 100 : 30
   );
+  const [dateRanges, setDateRanges] = useState<DateRange[]>(() => {
+    // Load from new campaignDates format
+    if (initialData?.campaignDates && initialData.campaignDates.length > 0) {
+      return initialData.campaignDates.map((range) => ({
+        from: new Date(range.from),
+        to: new Date(range.to),
+      }));
+    }
+    // Fallback to legacy startDate/endDate
+    if (initialData?.startDate || initialData?.endDate) {
+      return [{
+        from: initialData.startDate ? new Date(initialData.startDate) : undefined,
+        to: initialData.endDate ? new Date(initialData.endDate) : undefined,
+      }];
+    }
+    return [];
+  });
 
   const {
     register,
@@ -151,6 +175,33 @@ export function RewardRuleForm({
     setValue('probability', probabilityValue);
   }, [probabilityValue, setValue]);
 
+  // Update form values when date ranges change
+  useEffect(() => {
+    if (dateRanges.length > 0) {
+      // Convert DateRange[] to campaignDates format
+      const campaignDates = dateRanges
+        .filter((range) => range.from && range.to)
+        .map((range) => ({
+          from: range.from!.toISOString().split('T')[0],
+          to: range.to!.toISOString().split('T')[0],
+        }));
+      
+      setValue('campaignDates', campaignDates);
+      
+      // Also set legacy fields for backward compatibility (use first range)
+      if (dateRanges[0]?.from) {
+        setValue('startDate', dateRanges[0].from.toISOString().split('T')[0]);
+      }
+      if (dateRanges[0]?.to) {
+        setValue('endDate', dateRanges[0].to.toISOString().split('T')[0]);
+      }
+    } else {
+      setValue('campaignDates', undefined);
+      setValue('startDate', null);
+      setValue('endDate', null);
+    }
+  }, [dateRanges, setValue]);
+
   const handleFormSubmit = async (data: FormData) => {
     try {
       // Convert probability from percentage to decimal
@@ -160,6 +211,12 @@ export function RewardRuleForm({
         maxRedemptionsPerUser: data.maxRedemptionsPerUser || undefined,
         startDate: data.startDate || undefined,
         endDate: data.endDate || undefined,
+        campaignDates: data.campaignDates && data.campaignDates.length > 0
+          ? data.campaignDates.map((range) => ({
+              from: range.from,
+              to: range.to,
+            }))
+          : undefined,
       };
 
       await onSubmit(submitData as any);
@@ -391,37 +448,29 @@ export function RewardRuleForm({
         <CardHeader>
           <CardTitle>Campaign Schedule (Optional)</CardTitle>
           <CardDescription>
-            Set start and end dates for time-limited campaigns
+            Set start and end dates for time-limited campaigns (up to 1 year in advance)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                {...register('startDate')}
-              />
-              {errors.startDate && (
-                <p className="text-sm text-red-600">{errors.startDate.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                {...register('endDate')}
-              />
-              {errors.endDate && (
-                <p className="text-sm text-red-600">{errors.endDate.message}</p>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label>Campaign Date Ranges</Label>
+            <MultiDateRangePicker
+              value={dateRanges}
+              onChange={setDateRanges}
+              placeholder="Select campaign dates"
+              minDate={new Date()}
+              maxDate={addYears(new Date(), 1)}
+            />
+            {(errors.startDate || errors.endDate || errors.campaignDates) && (
+              <p className="text-sm text-red-600">
+                {errors.startDate?.message || errors.endDate?.message || errors.campaignDates?.message}
+              </p>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Leave empty for permanent rules. End date must be after start date.
+            Leave empty for permanent rules. Select multiple date ranges for non-contiguous campaigns
+            (e.g., weekends only, specific holidays). You can select dates up to 1 year in advance.
+            Use the "Clear All" button to remove all selected dates.
           </p>
         </CardContent>
       </Card>

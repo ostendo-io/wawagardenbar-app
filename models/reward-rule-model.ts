@@ -24,6 +24,12 @@ const rewardRuleSchema = new Schema<IRewardRule>(
     validityDays: { type: Number, required: true, min: 1 },
     startDate: { type: Date },
     endDate: { type: Date },
+    campaignDates: [
+      {
+        from: { type: Date, required: true },
+        to: { type: Date, required: true },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -38,6 +44,16 @@ rewardRuleSchema.index({ startDate: 1, endDate: 1 });
 rewardRuleSchema.methods.isCurrentlyActive = function isCurrentlyActive(): boolean {
   if (!this.isActive) return false;
   const now = new Date();
+  
+  // Check new campaignDates format (multiple ranges)
+  if (this.campaignDates && this.campaignDates.length > 0) {
+    // Rule is active if current date falls within any of the date ranges
+    return this.campaignDates.some(
+      (range: { from: Date; to: Date }) => now >= range.from && now <= range.to
+    );
+  }
+  
+  // Fallback to legacy startDate/endDate (single range)
   if (this.startDate && now < this.startDate) return false;
   if (this.endDate && now > this.endDate) return false;
   return true;

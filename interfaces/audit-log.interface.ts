@@ -15,6 +15,7 @@ export type AuditAction =
   | 'reward.update'
   | 'reward.delete'
   | 'settings.update'
+  | 'tab.manual_payment'
   | 'admin.login'
   | 'admin.logout';
 

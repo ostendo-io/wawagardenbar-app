@@ -41,3 +41,11 @@ remove rundundant code and update the existing implementation to support tabs an
 
 the payment options page is not displayed long enough for the customer to select enter/next when there is an open tab
 
+when on the "Pay Tab" page The full name and email should be prepopulated from the user profile which was already filled in when the orders where initially created
+
+on the "Pay Tab" page any available rewards should be displayed and the user should be able to apply them. there may be multiple rewards available for the tab
+
+the Campaign Schedule (Optional) on the edit reward rule page should be displayed as a date picker so that a date range can be selected or specific dates can be picked upto 1 year in advance of the date of the creation of the reward rule
+
+
+from the "Dashboard > Orders > Tabs" page admin should have the option "Customer wants to pay tab". This will enable admin complete payment for the tab and close the tab. Close tab by entering payment or transfer reference alon with comments or complete checkout process similar to customer payment and checkout process.

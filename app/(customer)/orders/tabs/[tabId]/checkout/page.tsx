@@ -9,14 +9,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { TipInputStep } from '@/components/features/checkout/tip-input-step';
 import { PaymentMethodStep } from '@/components/features/checkout/payment-method-step';
+import { RewardSelector } from '@/components/features/rewards/reward-selector';
 import { getTabDetailsAction } from '@/app/actions/tabs/tab-actions';
 import { initializeTabPayment } from '@/app/actions/payment/payment-actions';
+import { redeemRewardAction } from '@/app/actions/rewards/rewards-actions';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { IReward } from '@/interfaces';
 
 const checkoutSchema = z.object({
   tipAmount: z.number().min(0).optional(),
@@ -37,9 +41,12 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tabDetails, setTabDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedReward, setSelectedReward] = useState<IReward | null>(null);
+  const [rewardDiscount, setRewardDiscount] = useState(0);
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -55,6 +62,14 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
       const result = await getTabDetailsAction(resolvedParams.tabId);
       if (result.success && result.data) {
         setTabDetails(result.data);
+        
+        // Prepopulate form with customer data from tab or user profile
+        const { tab } = result.data;
+        const customerName = tab.customerName || user?.name || '';
+        const customerEmail = tab.customerEmail || user?.email || '';
+        
+        form.setValue('customerName', customerName);
+        form.setValue('customerEmail', customerEmail);
       } else {
         toast({
           title: 'Error',
@@ -66,15 +81,32 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
       setIsLoading(false);
     }
     loadTabDetails();
-  }, [resolvedParams.tabId, router, toast]);
+  }, [resolvedParams.tabId, router, toast, user, form]);
 
   async function onSubmit(data: CheckoutFormData) {
     setIsSubmitting(true);
 
     try {
+      // Redeem reward if selected
+      if (selectedReward) {
+        const redeemResult = await redeemRewardAction(
+          selectedReward._id.toString(),
+          resolvedParams.tabId
+        );
+        
+        if (!redeemResult.success) {
+          toast({
+            title: 'Warning',
+            description: redeemResult.error || 'Failed to apply reward, continuing with payment',
+            variant: 'destructive',
+          });
+        }
+      }
+
       const paymentResult = await initializeTabPayment({
         tabId: resolvedParams.tabId,
         tipAmount: data.tipAmount || 0,
+        rewardDiscount: rewardDiscount,
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         paymentMethods: [data.paymentMethod],
@@ -120,7 +152,8 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
 
   const { tab } = tabDetails;
   const tipAmount = form.watch('tipAmount') || 0;
-  const finalTotal = tab.total + tipAmount;
+  const subtotalWithTip = tab.total + tipAmount;
+  const finalTotal = Math.max(0, subtotalWithTip - rewardDiscount);
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -171,6 +204,15 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
                   />
                 </CardContent>
               </Card>
+
+              <RewardSelector
+                subtotal={tab.subtotal}
+                onRewardSelect={(reward, discount) => {
+                  setSelectedReward(reward);
+                  setRewardDiscount(discount);
+                }}
+                selectedRewardId={selectedReward?._id.toString()}
+              />
 
               <Card>
                 <CardHeader>
@@ -225,6 +267,12 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Tip:</span>
                         <span>₦{tipAmount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {rewardDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Reward Discount:</span>
+                        <span>-₦{rewardDiscount.toLocaleString()}</span>
                       </div>
                     )}
                     <div className="border-t pt-2 flex justify-between font-bold text-lg">

@@ -18,9 +18,10 @@ import { UtensilsCrossed, Package, Truck, MapPin, Clock } from 'lucide-react';
 
 interface OrderDetailsStepProps {
   form: UseFormReturn<any>;
+  hasExistingTab?: boolean;
 }
 
-export function OrderDetailsStep({ form }: OrderDetailsStepProps) {
+export function OrderDetailsStep({ form, hasExistingTab }: OrderDetailsStepProps) {
   const orderType = form.watch('orderType');
 
   return (
@@ -101,10 +102,18 @@ export function OrderDetailsStep({ form }: OrderDetailsStepProps) {
             <FormItem>
               <FormLabel>Table Number</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., T12" {...field} />
+                <Input 
+                  placeholder="e.g., T12" 
+                  {...field} 
+                  disabled={hasExistingTab}
+                  className={hasExistingTab ? 'bg-muted cursor-not-allowed' : ''}
+                />
               </FormControl>
               <FormDescription>
-                Enter your table number or scan the QR code
+                {hasExistingTab 
+                  ? 'Table number is set from your existing tab and cannot be changed'
+                  : 'Enter your table number or scan the QR code'
+                }
               </FormDescription>
               <FormMessage />
             </FormItem>

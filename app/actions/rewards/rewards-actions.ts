@@ -41,10 +41,12 @@ export async function calculateRewardAction(
     );
 
     if (reward) {
+      // Serialize reward to plain object for client components
+      const serializedReward = JSON.parse(JSON.stringify(reward));
       revalidatePath('/profile/rewards');
       return {
         success: true,
-        data: { reward },
+        data: { reward: serializedReward },
         message: 'Congratulations! You earned a reward!',
       };
     }
@@ -82,10 +84,13 @@ export async function getUserActiveRewardsAction(): Promise<
     }
 
     const rewards = await RewardsService.getUserActiveRewards(userId);
+    
+    // Serialize rewards to plain objects for client components
+    const serializedRewards = JSON.parse(JSON.stringify(rewards));
 
     return {
       success: true,
-      data: { rewards },
+      data: { rewards: serializedRewards },
     };
   } catch (error) {
     console.error('Error getting active rewards:', error);
@@ -119,10 +124,13 @@ export async function getUserRewardHistoryAction(
       userId,
       { limit, skip }
     );
+    
+    // Serialize rewards to plain objects for client components
+    const serializedRewards = JSON.parse(JSON.stringify(rewards));
 
     return {
       success: true,
-      data: { rewards, total },
+      data: { rewards: serializedRewards, total },
     };
   } catch (error) {
     console.error('Error getting reward history:', error);
@@ -159,10 +167,13 @@ export async function validateRewardCodeAction(
         error: result.message,
       };
     }
+    
+    // Serialize reward to plain object for client components
+    const serializedReward = JSON.parse(JSON.stringify(result.reward));
 
     return {
       success: true,
-      data: { reward: result.reward! },
+      data: { reward: serializedReward },
       message: 'Reward code is valid',
     };
   } catch (error) {

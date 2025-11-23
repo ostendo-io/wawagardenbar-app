@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { TabService } from '@/services';
+import { MainLayout } from '@/components/shared/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -82,7 +83,8 @@ export default async function TabDetailsPage({ params }: TabDetailsPageProps) {
   const { tab, orders } = await getTabDetails(tabId);
 
   return (
-    <div className="container mx-auto py-8">
+    <MainLayout>
+      <div className="container mx-auto py-8">
       {/* Header */}
       <div className="mb-8">
         <Link href="/orders">
@@ -269,6 +271,7 @@ export default async function TabDetailsPage({ params }: TabDetailsPageProps) {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

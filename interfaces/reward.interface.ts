@@ -16,8 +16,9 @@ export interface IRewardRule {
   probability: number;
   maxRedemptionsPerUser?: number;
   validityDays: number;
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: Date; // Deprecated: use campaignDates for multiple ranges
+  endDate?: Date;   // Deprecated: use campaignDates for multiple ranges
+  campaignDates?: Array<{ from: Date; to: Date }>; // Multiple date ranges
   createdAt: Date;
   updatedAt: Date;
 }

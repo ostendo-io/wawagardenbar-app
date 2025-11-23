@@ -6,7 +6,9 @@ import { revalidatePath } from 'next/cache';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
+import TabModel from '@/models/tab-model';
 import { AuditLogService } from '@/services/audit-log-service';
+import { TabService } from '@/services';
 import { completeOrderAndDeductStockAction } from '@/app/actions/order/complete-order-action';
 import { emitBatchUpdateEvent, emitOrderUpdatedEvent, emitOrderCancelledEvent } from '@/lib/socket-emit-helper';
 
@@ -457,6 +459,22 @@ export async function cancelOrderAction(
       return { success: false, error: 'Order already cancelled' };
     }
 
+    // Only allow cancellation of unpaid orders
+    if (order.paymentStatus === 'paid') {
+      return { success: false, error: 'Cannot cancel paid orders. Please process a refund instead.' };
+    }
+
+    // Check if order is part of a tab in settling status
+    if (order.tabId) {
+      const tab = await TabModel.findById(order.tabId);
+      if (tab && tab.status === 'settling') {
+        return { 
+          success: false, 
+          error: 'Cannot cancel orders from tabs that are currently settling. Please wait until the tab is closed or reopen it.' 
+        };
+      }
+    }
+
     const previousStatus = order.status;
     order.status = 'cancelled';
     order.statusHistory.push({
@@ -466,6 +484,16 @@ export async function cancelOrderAction(
     });
 
     await order.save();
+
+    // If order is part of a tab, recalculate tab totals
+    if (order.tabId) {
+      try {
+        await TabService.recalculateTabTotals(order.tabId.toString());
+      } catch (error) {
+        console.error('Error recalculating tab totals:', error);
+        // Don't fail the cancellation if tab recalculation fails
+      }
+    }
 
     // Create audit log
     await AuditLogService.createLog({

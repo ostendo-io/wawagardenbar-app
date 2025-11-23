@@ -63,6 +63,9 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
     return transitions[currentStatus]?.includes(newStatus);
   };
 
+  // Check if order is part of a settling tab
+  const isPartOfSettlingTab = order.tabId && order.tab?.status === 'settling';
+
   async function handleStatusUpdate(newStatus: string) {
     setIsUpdating(true);
     try {
@@ -167,17 +170,25 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
             Add Note
           </Button>
 
-          {/* Cancel Order */}
-          {canTransitionTo(order.status, 'cancelled') && (
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={() => setShowCancelDialog(true)}
-              disabled={isUpdating}
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Cancel Order
-            </Button>
+          {/* Cancel Order - Only for unpaid orders not in settling tabs */}
+          {canTransitionTo(order.status, 'cancelled') && order.paymentStatus !== 'paid' && (
+            <div className="space-y-2">
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={isUpdating || isPartOfSettlingTab}
+                title={isPartOfSettlingTab ? 'Cannot cancel orders from settling tabs' : ''}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Cancel Order
+              </Button>
+              {isPartOfSettlingTab && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Cannot cancel orders from tabs in settling status
+                </p>
+              )}
+            </div>
           )}
 
           {/* Utility Actions */}

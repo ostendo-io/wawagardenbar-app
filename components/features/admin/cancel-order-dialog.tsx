@@ -94,7 +94,9 @@ export function CancelOrderDialog({
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Cancelling this order will notify the customer and may trigger a refund if payment was completed.
+            Cancelling this order will notify the customer and deduct it from the tab total if applicable. 
+            Only unpaid orders can be cancelled. Orders from tabs in settling status cannot be cancelled. 
+            For paid orders, please process a refund instead.
           </AlertDescription>
         </Alert>
 

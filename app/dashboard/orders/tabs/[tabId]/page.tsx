@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Receipt } from 'lucide-react';
 import Link from 'next/link';
+import { DashboardTabActions } from '@/components/features/admin/tabs/dashboard-tab-actions';
 
 interface DashboardTabDetailsPageProps {
   params: Promise<{
@@ -208,6 +209,19 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
                   <p className="text-sm text-muted-foreground mt-2">
                     Paid on {tab.paidAt ? new Date(tab.paidAt).toLocaleString() : 'N/A'}
                   </p>
+                </div>
+              )}
+
+              {/* Payment Action Button */}
+              {tab.status === 'open' && (
+                <div className="pt-4 border-t">
+                  <DashboardTabActions
+                    tabId={tab._id}
+                    tabNumber={tab.tabNumber}
+                    tableNumber={tab.tableNumber}
+                    total={tab.total}
+                    status={tab.status}
+                  />
                 </div>
               )}
             </CardContent>

@@ -16,6 +16,7 @@ import { PaymentMethodStep } from './payment-method-step';
 import { TabOptionsStep } from './tab-options-step';
 import { TipInputStep } from './tip-input-step';
 import { OrderSummary } from './order-summary';
+import { OrderStatusDialog } from './order-status-dialog';
 import { createOrder, initializePayment } from '@/app/actions/payment/payment-actions';
 import { createTabAction, getOpenTabForUserAction } from '@/app/actions/tabs/tab-actions';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
@@ -52,6 +53,15 @@ const checkoutSchema = z.object({
   // Save preferences
   savePhone: z.boolean().optional(),
   saveAddress: z.boolean().optional(),
+}).refine((data) => {
+  // Table number is required for dine-in orders
+  if (data.orderType === 'dine-in' && !data.tableNumber) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Table number is required for dine-in orders',
+  path: ['tableNumber'],
 });
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
@@ -77,6 +87,14 @@ export function CheckoutForm() {
   const [isPreFilled, setIsPreFilled] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [orderStatus, setOrderStatus] = useState<{
+    status: 'success' | 'error';
+    title: string;
+    message: string;
+    redirectUrl?: string;
+    redirectLabel?: string;
+  } | null>(null);
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -118,16 +136,18 @@ export function CheckoutForm() {
   // Fetch existing tab for user when dine-in is selected
   useEffect(() => {
     async function fetchExistingTab() {
-      if (orderType === 'dine-in' && tableNumber) {
+      if (orderType === 'dine-in') {
         const result = await getOpenTabForUserAction();
         if (result.success && result.data?.tab) {
           setExistingTab(result.data.tab);
+          // Pre-populate table number from existing tab
+          form.setValue('tableNumber', result.data.tab.tableNumber);
           form.setValue('useTab', 'existing-tab');
         }
       }
     }
     fetchExistingTab();
-  }, [orderType, tableNumber]);
+  }, [orderType, form]);
 
   // Adjust steps based on order type and tab choice
   useEffect(() => {
@@ -154,12 +174,17 @@ export function CheckoutForm() {
     }
   }, [orderType, useTab]);
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty, unless we're showing the success dialog
   useEffect(() => {
+    // Don't redirect if we have a success status (meaning order just completed)
+    if (orderStatus?.status === 'success') {
+      return;
+    }
+
     if (items.length === 0) {
       router.push('/menu');
     }
-  }, [items.length, router]);
+  }, [items.length, router, orderStatus]);
 
   // Generate idempotency key when component mounts
   useEffect(() => {
@@ -211,11 +236,12 @@ export function CheckoutForm() {
           });
           
           if (!tabResult.success || !tabResult.data) {
-            toast({
-              title: 'Error',
-              description: tabResult.error || 'Failed to create tab',
-              variant: 'destructive',
+            setOrderStatus({
+              status: 'error',
+              title: 'Tab Creation Failed',
+              message: tabResult.error || 'Failed to create tab. Please try again.',
             });
+            setShowStatusDialog(true);
             setIsSubmitting(false);
             setHasSubmitted(false);
             return;
@@ -252,11 +278,12 @@ export function CheckoutForm() {
       });
 
       if (!orderResult.success || !orderResult.data) {
-        toast({
-          title: 'Error',
-          description: orderResult.message || 'Failed to create order',
-          variant: 'destructive',
+        setOrderStatus({
+          status: 'error',
+          title: 'Order Failed',
+          message: orderResult.message || 'Failed to create order. Please try again.',
         });
+        setShowStatusDialog(true);
         setIsSubmitting(false);
         setHasSubmitted(false);
         return;
@@ -266,33 +293,28 @@ export function CheckoutForm() {
 
       // If using a tab, don't initialize payment yet
       if (tabId) {
-        toast({
-          title: 'Order Added to Tab',
-          description: 'Your order has been added to your tab. You can add more orders or pay when ready.',
+        setOrderStatus({
+          status: 'success',
+          title: 'Order Added to Tab!',
+          message: 'Your order has been successfully added to your tab. You can add more orders or pay when ready.',
+          redirectUrl: `/orders/tabs/${tabId}`,
+          redirectLabel: 'View Tab',
         });
-        
-        // Show profile update success if applicable
-        if (isAuthenticated && (data.savePhone || data.saveAddress)) {
-          setTimeout(() => {
-            toast({
-              title: 'Profile Updated',
-              description: 'Your information has been saved for future orders.',
-            });
-          }, 1000);
-        }
-        
-        clearCart();
-        router.push('/orders');
+        setShowStatusDialog(true);
+        // Don't clear cart here - let the dialog handle it when user navigates
+        setIsSubmitting(false);
+        setHasSubmitted(false);
         return;
       }
 
       // Step 2: Initialize payment (only if not using tab)
       if (!data.paymentMethod) {
-        toast({
-          title: 'Error',
-          description: 'Please select a payment method',
-          variant: 'destructive',
+        setOrderStatus({
+          status: 'error',
+          title: 'Payment Method Required',
+          message: 'Please select a payment method to continue.',
         });
+        setShowStatusDialog(true);
         setIsSubmitting(false);
         setHasSubmitted(false);
         return;
@@ -307,11 +329,12 @@ export function CheckoutForm() {
       });
 
       if (!paymentResult.success || !paymentResult.data) {
-        toast({
-          title: 'Error',
-          description: paymentResult.message || 'Failed to initialize payment',
-          variant: 'destructive',
+        setOrderStatus({
+          status: 'error',
+          title: 'Payment Initialization Failed',
+          message: paymentResult.message || 'Failed to initialize payment. Please try again.',
         });
+        setShowStatusDialog(true);
         setIsSubmitting(false);
         setHasSubmitted(false);
         return;
@@ -337,11 +360,12 @@ export function CheckoutForm() {
       }, 500);
     } catch (error) {
       console.error('Checkout error:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
+      setOrderStatus({
+        status: 'error',
+        title: 'Unexpected Error',
+        message: 'An unexpected error occurred while processing your order. Please try again.',
       });
+      setShowStatusDialog(true);
       setIsSubmitting(false);
       setHasSubmitted(false);
     }
@@ -502,7 +526,7 @@ export function CheckoutForm() {
                   ) : (
                     currentStep === 1 && <CustomerInfoStep form={form} isPreFilled={isPreFilled} />
                   )}
-                  {currentStep === 2 && <OrderDetailsStep form={form} />}
+                  {currentStep === 2 && <OrderDetailsStep form={form} hasExistingTab={!!existingTab} />}
                   {currentStep === 3 && orderType === 'dine-in' && (
                     <TabOptionsStep
                       form={form}
@@ -550,6 +574,30 @@ export function CheckoutForm() {
           </div>
         </form>
       </Form>
+
+      {/* Order Status Dialog */}
+      {orderStatus && (
+        <OrderStatusDialog
+          open={showStatusDialog}
+          onOpenChange={(open) => {
+            setShowStatusDialog(open);
+            if (!open) {
+              // If user closes success dialog, clear cart and go to menu
+              if (orderStatus?.status === 'success') {
+                clearCart();
+                router.push('/menu');
+              }
+              // Reset order status when dialog closes
+              setOrderStatus(null);
+            }
+          }}
+          status={orderStatus.status}
+          title={orderStatus.title}
+          message={orderStatus.message}
+          redirectUrl={orderStatus.redirectUrl}
+          redirectLabel={orderStatus.redirectLabel}
+        />
+      )}
     </div>
   );
 }

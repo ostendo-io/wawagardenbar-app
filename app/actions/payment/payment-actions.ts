@@ -451,6 +451,7 @@ export async function getOrder(orderId: string): Promise<{
 export async function initializeTabPayment(params: {
   tabId: string;
   tipAmount?: number;
+  rewardDiscount?: number;
   customerName: string;
   customerEmail: string;
   paymentMethods: PaymentMethod[];
@@ -463,6 +464,16 @@ export async function initializeTabPayment(params: {
       params.tabId,
       params.tipAmount || 0
     );
+
+    // Apply reward discount if provided
+    if (params.rewardDiscount && params.rewardDiscount > 0) {
+      await TabService.applyDiscountToTab(params.tabId, params.rewardDiscount);
+      // Reload tab with updated discount
+      const updatedResult = await TabService.getTabById(params.tabId);
+      if (updatedResult) {
+        Object.assign(tab, updatedResult);
+      }
+    }
 
     if (!tab) {
       return {

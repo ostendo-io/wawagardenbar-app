@@ -143,14 +143,16 @@ export class TabService {
     }
 
     // Get all orders for this tab (both from orders array and by tabId)
+    // Exclude cancelled orders from calculation
     const orders = await OrderModel.find({
       $or: [
         { _id: { $in: tab.orders } },
         { tabId: new Types.ObjectId(tabId) }
-      ]
+      ],
+      status: { $ne: 'cancelled' } // Exclude cancelled orders
     }).lean();
 
-    // Calculate subtotal from all orders
+    // Calculate subtotal from all non-cancelled orders
     const subtotal = orders.reduce((sum, order) => sum + order.subtotal, 0);
 
     // Calculate fees using SettingsService (dine-in type)
@@ -333,6 +335,89 @@ export class TabService {
   }
 
   /**
+   * List tabs for a user with filtering options
+   */
+  static async listTabsWithFilters(
+    userId: string,
+    filters: {
+      statuses?: string[];
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<ITab[]> {
+    await connectDB();
+
+    const query: any = {
+      userId: new Types.ObjectId(userId),
+    };
+
+    // Filter by status
+    if (filters.statuses && filters.statuses.length > 0) {
+      query.status = { $in: filters.statuses };
+    }
+
+    // Filter by date range
+    if (filters.startDate || filters.endDate) {
+      query.openedAt = {};
+      if (filters.startDate) {
+        query.openedAt.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        // Set to end of day
+        const endOfDay = new Date(filters.endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query.openedAt.$lte = endOfDay;
+      }
+    }
+
+    const tabs = await TabModel.find(query)
+      .sort({ openedAt: -1 })
+      .lean();
+
+    // Ensure complete serialization to prevent client component errors
+    return JSON.parse(JSON.stringify(tabs));
+  }
+
+  /**
+   * List all tabs (admin/staff) with filtering options
+   */
+  static async listAllTabsWithFilters(filters: {
+    statuses?: string[];
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<ITab[]> {
+    await connectDB();
+
+    const query: any = {};
+
+    // Filter by status
+    if (filters.statuses && filters.statuses.length > 0) {
+      query.status = { $in: filters.statuses };
+    }
+
+    // Filter by date range
+    if (filters.startDate || filters.endDate) {
+      query.openedAt = {};
+      if (filters.startDate) {
+        query.openedAt.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        // Set to end of day
+        const endOfDay = new Date(filters.endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query.openedAt.$lte = endOfDay;
+      }
+    }
+
+    const tabs = await TabModel.find(query)
+      .sort({ openedAt: -1 })
+      .lean();
+
+    // Ensure complete serialization to prevent client component errors
+    return JSON.parse(JSON.stringify(tabs));
+  }
+
+  /**
    * Get tab details with populated orders
    */
   static async getTabDetails(tabId: string): Promise<{
@@ -383,6 +468,69 @@ export class TabService {
     };
     
     return JSON.parse(JSON.stringify(result));
+  }
+
+  /**
+   * Complete tab payment manually (admin)
+   * For cash, transfer, or POS payments
+   */
+  static async completeTabPaymentManually(params: {
+    tabId: string;
+    paymentType: 'cash' | 'transfer' | 'card';
+    paymentReference: string;
+    comments?: string;
+    processedBy: string;
+  }): Promise<ITab> {
+    await connectDB();
+
+    const tab = await TabModel.findById(params.tabId).populate('userId', 'email');
+    if (!tab) {
+      throw new Error('Tab not found');
+    }
+
+    if (tab.status === 'closed') {
+      throw new Error('Tab is already closed');
+    }
+
+    if (tab.paymentStatus === 'paid') {
+      throw new Error('Tab is already paid');
+    }
+
+    // Get customer email from tab or populated user
+    let customerEmail = tab.customerEmail || '';
+    if (!customerEmail && tab.userId) {
+      const populatedUser = tab.userId as any;
+      customerEmail = populatedUser.email || '';
+    }
+
+    // Update tab status and payment info
+    tab.status = 'closed';
+    tab.paymentStatus = 'paid';
+    tab.paymentReference = params.paymentReference;
+    tab.paidAt = new Date();
+    tab.closedAt = new Date();
+
+    await tab.save();
+
+    // Create audit log for manual payment
+    const AuditLogService = (await import('./audit-log-service')).AuditLogService;
+    await AuditLogService.createLog({
+      userId: params.processedBy,
+      userEmail: customerEmail || 'guest@wawagardenbar.com',
+      userRole: 'admin',
+      action: 'tab.manual_payment',
+      resource: 'tab',
+      resourceId: params.tabId,
+      details: {
+        paymentType: params.paymentType,
+        paymentReference: params.paymentReference,
+        comments: params.comments,
+        total: tab.total,
+        processedByAdmin: params.processedBy,
+      },
+    });
+
+    return JSON.parse(JSON.stringify(tab.toObject()));
   }
 
   /**
