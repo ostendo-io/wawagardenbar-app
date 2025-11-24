@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
           orderId: data.orderId,
           updates: data.updates,
           action: data.action,
+          status: data.status,
           updatedBy: data.updatedBy,
         });
         break;

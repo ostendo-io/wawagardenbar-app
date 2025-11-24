@@ -11,7 +11,8 @@ interface GuestCheckoutResult {
 }
 
 export async function guestCheckoutAction(
-  email: string
+  email: string,
+  name?: string
 ): Promise<GuestCheckoutResult> {
   try {
     if (!email || !validateEmail(email)) {
@@ -30,6 +31,9 @@ export async function guestCheckoutAction(
     );
 
     session.email = sanitizedEmail;
+    if (name) {
+      session.name = name;
+    }
     session.isGuest = true;
     session.isLoggedIn = true;
     session.createdAt = Date.now();

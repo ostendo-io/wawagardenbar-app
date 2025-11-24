@@ -79,7 +79,7 @@ async function UsersTable() {
                       {user.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>{user.orderCount}</TableCell>
+                  <TableCell>{user.totalOrders}</TableCell>
                   <TableCell>₦{user.totalSpent.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={user.emailVerified ? 'default' : 'secondary'}>

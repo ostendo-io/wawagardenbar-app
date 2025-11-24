@@ -49,7 +49,6 @@ export function PointsConversionSettings() {
   const [isFetching, setIsFetching] = useState(true);
   const [currentRate, setCurrentRate] = useState(100);
   const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [updatedBy, setUpdatedBy] = useState<string>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [impactData, setImpactData] = useState<ImpactData | null>(null);
   const [pendingRate, setPendingRate] = useState<number>(0);
@@ -81,7 +80,6 @@ export function PointsConversionSettings() {
         setCurrentRate(data.rate || 100);
         setValue('rate', data.rate || 100);
         setLastUpdated(data.updatedAt ? new Date(data.updatedAt).toLocaleString() : '');
-        setUpdatedBy(data.updatedBy || '');
       } catch (error) {
         console.error('Failed to fetch conversion rate:', error);
         toast({
@@ -114,6 +112,7 @@ export function PointsConversionSettings() {
       return () => clearTimeout(timer);
     } else {
       setImpactData(null);
+      return;
     }
   }, [rate, currentRate]);
 

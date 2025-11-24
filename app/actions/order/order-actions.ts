@@ -8,8 +8,8 @@ import { OrderStatus, OrderType, IOrder } from '@/interfaces';
 import { sessionOptions, SessionData } from '@/lib/session';
 import {
   emitOrderStatusUpdate,
-  emitNewOrderToKitchen,
-  emitOrderUpdateToKitchen,
+  emitNewOrder,
+  emitOrderChange,
 } from '@/lib/socket-server';
 
 export interface CreateOrderActionInput {
@@ -106,7 +106,7 @@ export async function createOrderAction(
     });
 
     // Emit new order to kitchen via WebSocket
-    emitNewOrderToKitchen({
+    emitNewOrder({
       orderId: order._id.toString(),
       orderNumber: order.orderNumber,
       orderType: order.orderType,
@@ -174,9 +174,8 @@ export async function updateOrderStatusAction(
     );
 
     // Emit update to kitchen
-    emitOrderUpdateToKitchen({
+    emitOrderChange({
       orderId,
-      orderNumber: order.orderNumber,
       status,
       action: 'updated',
     });
@@ -249,9 +248,8 @@ export async function cancelOrderAction(
     );
 
     // Emit update to kitchen
-    emitOrderUpdateToKitchen({
+    emitOrderChange({
       orderId,
-      orderNumber: order.orderNumber,
       status: 'cancelled',
       action: 'cancelled',
     });

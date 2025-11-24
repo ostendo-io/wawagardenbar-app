@@ -238,7 +238,7 @@ export class PointsService {
     userId: Types.ObjectId | string,
     amount: number,
     reason: string,
-    adminUserId: Types.ObjectId | string
+    _adminUserId: Types.ObjectId | string
   ): Promise<IPointsTransaction> {
     await connectDB();
     

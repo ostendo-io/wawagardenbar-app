@@ -49,7 +49,7 @@ export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) 
   const { clearSelection } = useOrderStore();
   const router = useRouter();
 
-  async function handleBatchUpdate(action: string, data?: any) {
+  async function handleBatchUpdate(action: 'updateStatus' | 'cancel', data?: any) {
     setIsProcessing(true);
     try {
       const result = await batchUpdateOrdersAction(selectedOrderIds, action, data);

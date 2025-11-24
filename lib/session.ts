@@ -4,6 +4,7 @@ import { UserRole } from '@/interfaces/user.interface';
 export interface SessionData {
   userId?: string;
   email?: string;
+  name?: string;
   role?: UserRole;
   isGuest?: boolean;
   isLoggedIn: boolean;

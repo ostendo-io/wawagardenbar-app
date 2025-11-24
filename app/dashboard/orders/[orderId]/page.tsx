@@ -21,27 +21,6 @@ interface OrderDetailsPageProps {
 }
 
 /**
- * Loading skeletons
- */
-function OrderDetailsSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-32 w-full" />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-        <div className="space-y-6">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
  * Order details page
  * Displays comprehensive order information with real-time updates
  */
