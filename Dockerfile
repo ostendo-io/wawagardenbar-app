@@ -68,3 +68,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Start application with dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "start"]
+
