@@ -613,10 +613,7 @@ export async function duplicateMenuItemAction(
     }
 
     // Create duplicate with modified name
-    const duplicateData = originalItem.toObject();
-    delete duplicateData._id;
-    delete duplicateData.createdAt;
-    delete duplicateData.updatedAt;
+    const { _id: _itemId, createdAt: _itemCreatedAt, updatedAt: _itemUpdatedAt, ...duplicateData } = originalItem.toObject();
     duplicateData.name = `${duplicateData.name} (Copy)`;
     duplicateData.isAvailable = false; // Set to unavailable by default
 
@@ -626,11 +623,8 @@ export async function duplicateMenuItemAction(
     if (originalItem.trackInventory && originalItem.inventoryId) {
       const originalInventory = await InventoryModel.findById(originalItem.inventoryId);
       if (originalInventory) {
-        const inventoryData = originalInventory.toObject();
-        delete inventoryData._id;
-        delete inventoryData.createdAt;
-        delete inventoryData.updatedAt;
-        inventoryData.menuItemId = newItem._id;
+        const { _id: _invId, createdAt: _invCreatedAt, updatedAt: _invUpdatedAt, ...inventoryData } = originalInventory.toObject();
+        inventoryData.menuItemId = newItem._id as unknown as Types.ObjectId;
         inventoryData.currentStock = 0; // Start with 0 stock
         inventoryData.totalSales = 0;
         inventoryData.totalWaste = 0;
@@ -638,7 +632,7 @@ export async function duplicateMenuItemAction(
         inventoryData.stockHistory = [];
 
         const newInventory = await InventoryModel.create(inventoryData);
-        newItem.inventoryId = newInventory._id;
+        newItem.inventoryId = newInventory._id.toString();
         await newItem.save();
       }
     }
