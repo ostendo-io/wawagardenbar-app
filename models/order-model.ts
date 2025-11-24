@@ -176,7 +176,6 @@ orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index({ status: 1, orderType: 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ guestEmail: 1 });
-orderSchema.index({ idempotencyKey: 1 });
 
 orderSchema.pre('save', function preSave(next) {
   if (this.isNew) {

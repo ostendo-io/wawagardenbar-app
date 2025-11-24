@@ -31,9 +31,6 @@ export default function HomePage() {
 
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
             <Button asChild size="lg" className="text-lg">
-              <Link href="/order">Order Now</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="text-lg">
               <Link href="/menu">View Menu</Link>
             </Button>
           </div>
@@ -96,19 +93,6 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="border-t bg-muted py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-4 text-3xl font-bold">Ready to Order?</h2>
-          <p className="mb-8 text-lg text-muted-foreground">
-            Sign in or continue as a guest to get started
-          </p>
-          <Button asChild size="lg">
-            <Link href="/order">Get Started</Link>
-          </Button>
         </div>
       </section>
     </main>

@@ -9,7 +9,6 @@ import { OrderExport } from './order-export';
 import { OrderBatchActions } from './order-batch-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -30,8 +29,6 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
     setOrders,
     selectedOrders,
     toggleSelectOrder,
-    selectAllOrders,
-    clearSelection,
   } = useOrderStore();
 
   const [activeTab, setActiveTab] = useState('all');
@@ -113,16 +110,6 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
     setTimeout(() => setIsRefreshing(false), 1000);
   }, [router]);
 
-  const allSelected = filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length;
-
-  const handleSelectAll = useCallback(() => {
-    if (allSelected) {
-      clearSelection();
-    } else {
-      selectAllOrders();
-    }
-  }, [allSelected, clearSelection, selectAllOrders]);
-
   const handleFilterChange = useCallback((newFilters: FilterValues) => {
     setFilters(newFilters);
   }, []);
@@ -188,19 +175,6 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-
-        {/* Select all checkbox */}
-        {filteredOrders.length > 0 && (
-          <div className="flex items-center gap-2 mb-4 p-2 bg-muted rounded">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={handleSelectAll}
-            />
-            <span className="text-sm">
-              {allSelected ? 'Deselect all' : 'Select all'}
-            </span>
-          </div>
-        )}
 
         {/* Order list */}
         {filteredOrders.length === 0 ? (
