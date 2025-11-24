@@ -17,6 +17,22 @@ interface TabDetailsPageProps {
   }>;
 }
 
+interface SerializedOrderItem {
+  name: string;
+  quantity: number;
+  subtotal: number;
+}
+
+interface SerializedOrder {
+  _id: string;
+  orderNumber: string;
+  status: string;
+  items: SerializedOrderItem[];
+  specialInstructions?: string;
+  total: number;
+  createdAt: string;
+}
+
 async function getTabDetails(tabId: string) {
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
@@ -56,11 +72,11 @@ async function getTabDetails(tabId: string) {
       paidAt: plainTab.paidAt,
     };
 
-    const serializedOrders = plainOrders.map((order: any) => ({
+    const serializedOrders: SerializedOrder[] = plainOrders.map((order: any): SerializedOrder => ({
       _id: order._id,
       orderNumber: order.orderNumber,
       status: order.status,
-      items: order.items.map((item: any) => ({
+      items: order.items.map((item: any): SerializedOrderItem => ({
         name: item.name,
         quantity: item.quantity,
         subtotal: item.subtotal,
