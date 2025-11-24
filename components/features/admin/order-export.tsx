@@ -11,9 +11,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Order } from '@/stores/order-store';
 
 interface OrderExportProps {
-  orders: any[];
+  orders: Order[];
   filename?: string;
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useOrderStore } from '@/stores/order-store';
+import { useOrderStore, Order } from '@/stores/order-store';
 import { OrderCard } from './order-card';
 import { OrderFilters, FilterValues } from './order-filters';
 import { OrderSearch } from './order-search';
@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 interface OrderQueueProps {
-  initialOrders: any[];
+  initialOrders: Order[];
 }
 
 /**

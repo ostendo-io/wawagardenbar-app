@@ -9,7 +9,7 @@ export interface OrderFilters {
   paymentStatus?: string;
 }
 
-interface Order {
+export interface Order {
   _id: string;
   orderNumber: string;
   orderType: string;
