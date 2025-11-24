@@ -124,7 +124,7 @@ export default async function RewardsPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {availableRules.map((rule) => (
-                <RewardRuleCard key={rule._id.toString()} rule={rule} userId={session.userId!} />
+                <RewardRuleCard key={rule._id.toString()} rule={rule} />
               ))}
             </div>
           )}
@@ -417,7 +417,7 @@ function PointsTransactionCard({ transaction, conversionRate }: { transaction: I
 /**
  * Reward rule card component - shows available reward types
  */
-function RewardRuleCard({ rule, userId }: { rule: IRewardRule; userId: string }) {
+function RewardRuleCard({ rule }: { rule: IRewardRule }) {
   function getRewardIcon(rewardType: string) {
     switch (rewardType) {
       case 'discount-percentage':
