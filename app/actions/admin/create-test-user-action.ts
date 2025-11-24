@@ -34,7 +34,7 @@ export async function createTestUserAction(
     }
 
     // Create user
-    const user = await UserModel.create({
+    await UserModel.create({
       email,
       name,
       role,
