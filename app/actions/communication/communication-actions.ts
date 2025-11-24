@@ -11,7 +11,7 @@ import {
   sendOrderCancellationEmail,
   sendSupportTicketEmail,
 } from '@/lib/email';
-import { emitOrderStatusUpdate, emitOrderUpdateToKitchen } from '@/lib/socket-server';
+import { emitOrderStatusUpdate, emitOrderChange } from '@/lib/socket-server';
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -159,9 +159,8 @@ export async function requestOrderModificationAction(input: {
 
     // In a real app, save modification request to database
     // For now, we'll just emit to kitchen
-    emitOrderUpdateToKitchen({
+    emitOrderChange({
       orderId: input.orderId,
-      orderNumber: order.orderNumber,
       status: order.status,
       action: 'updated',
     });
@@ -262,9 +261,8 @@ export async function cancelOrderWithRefundAction(input: {
     }
 
     // Emit to kitchen
-    emitOrderUpdateToKitchen({
+    emitOrderChange({
       orderId: input.orderId,
-      orderNumber: order.orderNumber,
       status: 'cancelled',
       action: 'cancelled',
     });
