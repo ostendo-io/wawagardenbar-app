@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { OrderTypeSelection } from '@/components/shared/order/order-type-selection';
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function OrderPage() {
-  return <OrderTypeSelection />;
+  return (
+    <Suspense>
+      <OrderTypeSelection />
+    </Suspense>
+  );
 }
