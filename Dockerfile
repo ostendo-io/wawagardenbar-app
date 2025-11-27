@@ -42,6 +42,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.ts ./next.config.ts
 COPY --from=builder /app/server.ts ./server.ts
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/interfaces ./interfaces
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /app/public/uploads/menu-items && \
