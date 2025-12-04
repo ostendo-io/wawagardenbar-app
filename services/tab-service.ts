@@ -295,6 +295,7 @@ export class TabService {
     tableNumber?: string;
     userId?: string;
     openedByStaffId?: string;
+    customerEmail?: string;
   }): Promise<ITab[]> {
     await connectDB();
 
@@ -305,6 +306,9 @@ export class TabService {
     }
     if (filters?.userId) {
       query.userId = new Types.ObjectId(filters.userId);
+    }
+    if (filters?.customerEmail) {
+      query.customerEmail = filters.customerEmail;
     }
     if (filters?.openedByStaffId) {
       query.openedByStaffId = new Types.ObjectId(filters.openedByStaffId);

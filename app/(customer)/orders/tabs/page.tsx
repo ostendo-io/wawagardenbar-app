@@ -14,12 +14,22 @@ async function getCustomerTabs() {
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
-  if (!session.userId) {
+  if (!session.isLoggedIn) {
     redirect('/auth/login');
   }
 
-  // Get user's open tabs
-  const tabs = await TabService.listOpenTabs({ userId: session.userId });
+  let tabs = [];
+
+  if (session.userId) {
+    // Get user's open tabs by userId
+    tabs = await TabService.listOpenTabs({ userId: session.userId });
+  } else if (session.isGuest && session.email) {
+    // Get guest's open tabs by email
+    tabs = await TabService.listOpenTabs({ customerEmail: session.email });
+  } else {
+    // Should not happen if isLoggedIn is true but just in case
+    redirect('/auth/login');
+  }
 
   // Serialize tabs for client component
   const serializedTabs = tabs.map((tab) => ({

@@ -37,15 +37,33 @@ async function getTabDetails(tabId: string) {
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
-  if (!session.userId) {
+  if (!session.isLoggedIn) {
     redirect('/auth/login');
   }
 
   try {
     const details = await TabService.getTabDetails(tabId);
+    const tab = details.tab;
 
     // Verify this tab belongs to the user
-    if (details.tab.userId?.toString() !== session.userId) {
+    let isAuthorized = false;
+
+    if (session.userId) {
+      // Registered user
+      if (tab.userId && tab.userId.toString() === session.userId) {
+        isAuthorized = true;
+      } else if (!tab.userId && tab.customerEmail === session.email) {
+        // Allow if tab is guest tab but email matches
+        isAuthorized = true;
+      }
+    } else if (session.isGuest && session.email) {
+      // Guest user
+      if (tab.customerEmail === session.email) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       redirect('/orders');
     }
 
