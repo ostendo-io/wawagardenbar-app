@@ -13,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { guestCheckoutAction } from '@/app/actions/auth';
 
 const guestSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  name: z.string().min(2, 'Name must be at least 2 characters').optional(),
+  email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
+  name: z.string().min(2, 'Name must be at least 2 characters').optional().or(z.literal('')),
 });
 
 type GuestFormData = z.infer<typeof guestSchema>;
@@ -40,7 +40,11 @@ export function GuestCheckoutForm({ redirectTo = '/menu', onSuccess }: GuestChec
   async function handleSubmit(data: GuestFormData) {
     setIsLoading(true);
     try {
-      const result = await guestCheckoutAction(data.email, data.name);
+      // Convert empty strings to undefined
+      const email = data.email || undefined;
+      const name = data.name || undefined;
+
+      const result = await guestCheckoutAction(email, name);
       
       if (result.success) {
         toast({
@@ -75,11 +79,11 @@ export function GuestCheckoutForm({ redirectTo = '/menu', onSuccess }: GuestChec
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="guest-email">Email Address</Label>
+        <Label htmlFor="guest-email">Email Address (Optional)</Label>
         <Input
           id="guest-email"
           type="email"
-          placeholder="your@email.com"
+          placeholder="Optional - for order updates"
           {...form.register('email')}
           disabled={isLoading}
         />

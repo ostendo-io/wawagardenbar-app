@@ -27,6 +27,7 @@ export async function createTabAction(params: {
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
     const userId = session.userId;
+    const guestId = session.isGuest ? session.guestId : undefined;
 
     if (!params.tableNumber) {
       return {
@@ -50,6 +51,7 @@ export async function createTabAction(params: {
       customerName: params.customerName,
       customerEmail: params.customerEmail,
       customerPhone: params.customerPhone,
+      guestId,
     });
 
     revalidatePath('/orders');
@@ -80,18 +82,35 @@ export async function getOpenTabForUserAction(): Promise<
     const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
     const userId = session.userId;
 
-    if (!userId) {
+    if (userId) {
+      const tab = await TabService.getOpenTabForUser(userId);
       return {
-        success: false,
-        error: 'User must be logged in',
+        success: true,
+        data: { tab },
       };
     }
 
-    const tab = await TabService.getOpenTabForUser(userId);
+    if (session.isGuest && session.guestId) {
+      const tab = await TabService.getOpenTabForGuest(session.guestId);
+      return {
+        success: true,
+        data: { tab },
+      };
+    }
+    
+    // Legacy guest support (email only)
+    if (session.isGuest && session.email) {
+      const tabs = await TabService.listOpenTabs({ customerEmail: session.email });
+      const tab = tabs.length > 0 ? tabs[0] : null;
+      return {
+        success: true,
+        data: { tab },
+      };
+    }
 
     return {
-      success: true,
-      data: { tab },
+      success: false,
+      error: 'User must be logged in',
     };
   } catch (error) {
     console.error('Error getting open tab:', error);

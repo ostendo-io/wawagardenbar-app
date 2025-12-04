@@ -6,6 +6,7 @@ export interface UpdateProfileFromCheckoutData {
   userId: string;
   firstName?: string;
   lastName?: string;
+  email?: string;
   phone?: string;
   address?: {
     label?: string;
@@ -34,6 +35,15 @@ export class UserService {
     }
 
     const updates: Partial<IUser> = {};
+
+    // Update email if provided and not already set (or update existing)
+    // We piggyback on savePhone or just always save if missing because email is critical for receipts
+    if (data.email) {
+      // If user has no email, or if savePhone is true (treating it as "Save Contact Info")
+      if (!user.email || data.savePhone) {
+        updates.email = data.email;
+      }
+    }
 
     // Update phone if provided and save requested
     if (data.phone && data.savePhone) {

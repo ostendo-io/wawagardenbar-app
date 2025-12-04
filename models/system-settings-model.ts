@@ -3,8 +3,8 @@ import { Types } from 'mongoose';
 
 export interface ISystemSettings {
   _id: Types.ObjectId;
-  key: 'points-conversion-rate' | 'service-fee' | 'tax-rate';
-  value: number;
+  key: 'points-conversion-rate' | 'service-fee' | 'tax-rate' | 'notification-preferences';
+  value: any;
   description?: string;
   updatedBy?: Types.ObjectId;
   updatedAt: Date;
@@ -23,7 +23,7 @@ const systemSettingsSchema = new Schema<ISystemSettings>(
       type: String,
       required: true,
       unique: true,
-      enum: ['points-conversion-rate', 'service-fee', 'tax-rate'],
+      enum: ['points-conversion-rate', 'service-fee', 'tax-rate', 'notification-preferences'],
     },
     value: { type: Schema.Types.Mixed, required: true },
     description: { type: String },

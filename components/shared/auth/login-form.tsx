@@ -1,26 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Smartphone, Mail, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { sendPinAction, verifyPinAction } from '@/app/actions/auth';
+import { sendPinAction, verifyPinAction, sendEmailPinAction, verifyEmailPinAction } from '@/app/actions/auth';
+import { sanitizePhone } from '@/lib/auth-utils';
+
+const phoneSchema = z.object({
+  phone: z.string().min(10, 'Phone number must be at least 10 digits').max(15, 'Phone number too long').regex(/^[\d+\s-]+$/, 'Invalid phone format'),
+});
 
 const emailSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().email('Invalid email address'),
 });
 
 const pinSchema = z.object({
   pin: z.string().length(4, 'PIN must be 4 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
 });
 
+type PhoneFormData = z.infer<typeof phoneSchema>;
 type EmailFormData = z.infer<typeof emailSchema>;
 type PinFormData = z.infer<typeof pinSchema>;
 
@@ -30,12 +37,35 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
-  const [step, setStep] = useState<'email' | 'pin'>('email');
+  const [step, setStep] = useState<'phone' | 'email' | 'pin'>('phone');
+  const [authMethod, setAuthMethod] = useState<'sms' | 'email'>('sms');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [smsError, setSmsError] = useState<{ message: string; canRetryWithEmail: boolean } | null>(null);
+  const [countdown, setCountdown] = useState(0);
   const router = useRouter();
   const { toast } = useToast();
   const { refreshSession } = useAuth();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [countdown]);
+
+  const phoneForm = useForm<PhoneFormData>({
+    resolver: zodResolver(phoneSchema),
+    defaultValues: {
+      phone: '',
+    },
+  });
 
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
@@ -51,14 +81,65 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     },
   });
 
+  async function handlePhoneSubmit(data: PhoneFormData) {
+    setIsLoading(true);
+    setSmsError(null);
+    setCountdown(60);
+    try {
+      const result = await sendPinAction(data.phone);
+      
+      if (result.success) {
+        // Sanitize and store phone to ensure consistency
+        setPhone(sanitizePhone(data.phone));
+        setAuthMethod('sms');
+        setStep('pin');
+        toast({
+          title: 'PIN Sent',
+          description: result.message,
+        });
+      } else {
+        // Check if we can retry with email
+        if (result.canRetryWithEmail) {
+          // Save phone number so it's available for email fallback
+          setPhone(sanitizePhone(data.phone));
+          
+          setSmsError({
+            message: result.message,
+            canRetryWithEmail: true,
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: result.message,
+            variant: 'destructive',
+          });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleEmailSubmit(data: EmailFormData) {
     setIsLoading(true);
     try {
-      const result = await sendPinAction(data.email);
+      console.log('Sending email PIN:', { email: data.email, phone });
+      
+      const result = await sendEmailPinAction(data.email, phone);
+      
+      console.log('Email PIN send result:', result);
       
       if (result.success) {
         setEmail(data.email);
+        setAuthMethod('email');
         setStep('pin');
+        console.log('Email state set to:', data.email);
         toast({
           title: 'PIN Sent',
           description: result.message,
@@ -81,10 +162,21 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     }
   }
 
+  function handleTryEmail() {
+    setSmsError(null);
+    setStep('email');
+  }
+
   async function handlePinSubmit(data: PinFormData) {
     setIsLoading(true);
     try {
-      const result = await verifyPinAction(email, data.pin);
+      console.log('Verifying PIN:', { authMethod, phone, email, pin: data.pin });
+      
+      const result = authMethod === 'sms' 
+        ? await verifyPinAction(phone, data.pin)
+        : await verifyEmailPinAction(email, data.pin);
+      
+      console.log('PIN verification result:', result);
       
       if (result.success) {
         toast({
@@ -122,12 +214,16 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
   async function handleResendPin() {
     setIsLoading(true);
     try {
-      const result = await sendPinAction(email);
+      const result = authMethod === 'sms'
+        ? await sendPinAction(phone)
+        : await sendEmailPinAction(email, phone);
       
       if (result.success) {
         toast({
           title: 'PIN Resent',
-          description: 'A new PIN has been sent to your email.',
+          description: authMethod === 'sms' 
+            ? 'A new PIN has been sent to your phone.'
+            : 'A new PIN has been sent to your email.',
         });
         pinForm.reset();
       } else {
@@ -148,18 +244,84 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     }
   }
 
+  if (step === 'phone') {
+    return (
+      <form onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)} className="space-y-4">
+        {smsError && smsError.canRetryWithEmail && (
+          <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="ml-2">
+              <p className="mb-3 font-medium">{smsError.message}</p>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={handleTryEmail}
+                className="w-full"
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Try with Email Instead
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone Number</Label>
+          <div className="relative">
+            <Smartphone className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="+234 800 000 0000"
+              className="pl-10"
+              {...phoneForm.register('phone')}
+              disabled={isLoading}
+            />
+          </div>
+          {phoneForm.formState.errors.phone && (
+            <p className="text-sm text-red-500">
+              {phoneForm.formState.errors.phone.message}
+            </p>
+          )}
+        </div>
+
+        <Button type="submit" className="w-full" disabled={isLoading || countdown > 0}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {countdown > 0 ? `Wait ${countdown}s` : 'Continue'}
+        </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          We'll send a 4-digit PIN to your phone
+        </p>
+      </form>
+    );
+  }
+
   if (step === 'email') {
     return (
       <form onSubmit={emailForm.handleSubmit(handleEmailSubmit)} className="space-y-4">
+        <Alert>
+          <Mail className="h-4 w-4" />
+          <AlertDescription className="ml-2">
+            We'll send a verification PIN to your email address instead.
+          </AlertDescription>
+        </Alert>
+
         <div className="space-y-2">
           <Label htmlFor="email">Email Address</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="your@email.com"
-            {...emailForm.register('email')}
-            disabled={isLoading}
-          />
+          <div className="relative">
+            <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              className="pl-10"
+              {...emailForm.register('email')}
+              disabled={isLoading}
+              autoFocus
+            />
+          </div>
           {emailForm.formState.errors.email && (
             <p className="text-sm text-red-500">
               {emailForm.formState.errors.email.message}
@@ -169,12 +331,20 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Continue
+          Send PIN to Email
         </Button>
 
-        <p className="text-center text-sm text-muted-foreground">
-          We'll send a 4-digit PIN to your email
-        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setStep('phone');
+            setSmsError(null);
+          }}
+          className="w-full text-sm text-muted-foreground hover:text-foreground"
+          disabled={isLoading}
+        >
+          Back to phone number
+        </button>
       </form>
     );
   }
@@ -200,7 +370,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           </p>
         )}
         <p className="text-sm text-muted-foreground">
-          Enter the 4-digit PIN sent to {email}
+          Enter the 4-digit PIN sent to {authMethod === 'sms' ? phone : email}
         </p>
       </div>
 
@@ -212,11 +382,14 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
       <div className="flex items-center justify-between text-sm">
         <button
           type="button"
-          onClick={() => setStep('email')}
+          onClick={() => {
+            setStep(authMethod === 'sms' ? 'phone' : 'email');
+            setSmsError(null);
+          }}
           className="text-muted-foreground hover:text-foreground"
           disabled={isLoading}
         >
-          Change email
+          Change {authMethod === 'sms' ? 'phone number' : 'email'}
         </button>
         <button
           type="button"

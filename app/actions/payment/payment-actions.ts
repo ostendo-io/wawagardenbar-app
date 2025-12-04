@@ -184,6 +184,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           userId,
           firstName,
           lastName,
+          email: input.customerInfo.email,
           phone: input.customerInfo.phone,
           address: input.deliveryInfo ? {
             streetAddress: input.deliveryInfo.address,

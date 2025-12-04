@@ -1,5 +1,6 @@
 import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { SettingsService } from '@/services';
+import { SystemSettingsService } from '@/services/system-settings-service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsForm } from '@/components/features/admin/settings-form';
 
@@ -16,7 +17,10 @@ export default async function SettingsPage() {
   await requireSuperAdmin();
 
   // Get current settings
-  const settings = await SettingsService.getSettings();
+  const [settings, notificationSettings] = await Promise.all([
+    SettingsService.getSettings(),
+    SystemSettingsService.getNotificationSettings()
+  ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
   const plainSettings = JSON.parse(JSON.stringify(settings));
@@ -61,7 +65,10 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SettingsForm initialSettings={serializedSettings} />
+          <SettingsForm 
+            initialSettings={serializedSettings} 
+            notificationSettings={notificationSettings}
+          />
         </CardContent>
       </Card>
     </div>

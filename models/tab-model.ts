@@ -29,6 +29,10 @@ const tabSchema = new Schema<ITab>(
     customerPhone: {
       type: String,
     },
+    guestId: {
+      type: String,
+      index: true,
+    },
     status: {
       type: String,
       enum: ['open', 'settling', 'closed'] as TabStatus[],

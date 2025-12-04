@@ -4,9 +4,11 @@ import { UserRole } from '@/interfaces/user.interface';
 export interface SessionData {
   userId?: string;
   email?: string;
+  phone?: string;
   name?: string;
   role?: UserRole;
   isGuest?: boolean;
+  guestId?: string;
   isLoggedIn: boolean;
   createdAt?: number;
 }

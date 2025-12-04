@@ -11,6 +11,7 @@ export interface ITab {
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  guestId?: string;
   status: TabStatus;
   orders: Types.ObjectId[];
   subtotal: number;

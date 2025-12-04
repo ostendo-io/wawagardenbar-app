@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Percent, DollarSign, Gift, Star, Loader2 } from 'lucide-react';
+import { ArrowLeft, Percent, DollarSign, Gift, Star, Loader2, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -82,6 +82,20 @@ const templates = [
       rewardValue: 15,
       probability: 40,
       validityDays: 7,
+    },
+  },
+  {
+    id: 'instagram-post',
+    name: 'Instagram Post Reward',
+    description: 'Award 10 points for every Instagram post we are hashtagged in',
+    icon: Instagram,
+    color: 'text-purple-500',
+    config: {
+      spendThreshold: 0,
+      rewardType: 'loyalty-points',
+      rewardValue: 10,
+      probability: 100,
+      validityDays: 365,
     },
   },
 ];

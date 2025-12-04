@@ -13,6 +13,13 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       sessionOptions
     );
 
+    console.log('Session API Debug:', {
+      isLoggedIn: session.isLoggedIn,
+      userId: session.userId,
+      isGuest: session.isGuest,
+      email: session.email
+    });
+
     if (!session.isLoggedIn) {
       return NextResponse.json(defaultSession);
     }

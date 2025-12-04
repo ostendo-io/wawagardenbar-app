@@ -155,6 +155,74 @@ export class SystemSettingsService {
   }
   
   /**
+   * Get notification settings
+   */
+  static async getNotificationSettings(): Promise<{
+    smsEnabled: boolean;
+    emailEnabled: boolean;
+    channels: {
+      auth: 'email' | 'sms' | 'both';
+      orders: 'email' | 'sms' | 'both';
+    };
+  }> {
+    await connectDB();
+    
+    const setting = await SystemSettingsModel.findOne({
+      key: 'notification-preferences',
+    });
+    
+    const defaults = {
+      smsEnabled: true,
+      emailEnabled: true,
+      channels: {
+        auth: 'sms',
+        orders: 'email',
+      },
+    };
+    
+    return { ...defaults, ...(setting?.value || {}) };
+  }
+
+  /**
+   * Update notification settings
+   */
+  static async updateNotificationSettings(
+    settings: {
+      smsEnabled: boolean;
+      emailEnabled: boolean;
+      channels: {
+        auth: 'email' | 'sms' | 'both';
+        orders: 'email' | 'sms' | 'both';
+      };
+    },
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+    
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'notification-preferences' },
+      {
+        $set: {
+          value: settings,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: settings,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Notification settings updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+    
+    return true;
+  }
+
+  /**
    * Initialize default settings
    */
   static async initializeDefaults(): Promise<void> {

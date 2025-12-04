@@ -14,19 +14,32 @@ async function getCustomerTabs() {
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
+  console.log('CustomerTabsPage Session Debug:', {
+    isLoggedIn: session.isLoggedIn,
+    userId: session.userId,
+    isGuest: session.isGuest,
+    email: session.email
+  });
+
   if (!session.isLoggedIn) {
+    console.log('Redirecting to login: Not logged in');
     redirect('/auth/login');
   }
 
-  let tabs = [];
+  let tabs: any[] = [];
 
   if (session.userId) {
     // Get user's open tabs by userId
     tabs = await TabService.listOpenTabs({ userId: session.userId });
-  } else if (session.isGuest && session.email) {
-    // Get guest's open tabs by email
-    tabs = await TabService.listOpenTabs({ customerEmail: session.email });
+  } else if (session.isGuest) {
+    // Get guest's open tabs by guestId or email
+    if (session.guestId) {
+      tabs = await TabService.listOpenTabs({ guestId: session.guestId });
+    } else if (session.email) {
+      tabs = await TabService.listOpenTabs({ customerEmail: session.email });
+    }
   } else {
+    console.log('Redirecting to login: Invalid session state');
     // Should not happen if isLoggedIn is true but just in case
     redirect('/auth/login');
   }

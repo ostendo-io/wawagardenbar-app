@@ -25,24 +25,48 @@ export default async function OrdersPage() {
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
-  if (!session.userId) {
+  if (!session.isLoggedIn) {
     redirect('/login?redirect=/orders');
   }
 
-  // Fetch user orders (exclude orders that are part of tabs)
-  const result = await OrderService.getOrdersByUserId(session.userId, {
-    limit: 50,
-    skip: 0,
-  });
+  let standaloneOrders: any[] = [];
+  let allTabs: any[] = [];
 
-  // Fetch ALL user's tabs (open, closed, paid - all statuses)
-  const allTabs = await TabService.listAllTabsForUser(session.userId);
+  if (session.userId) {
+    // Registered User Logic
+    // Fetch user orders (exclude orders that are part of tabs)
+    const result = await OrderService.getOrdersByUserId(session.userId, {
+      limit: 50,
+      skip: 0,
+    });
 
-  // Show only orders that are NOT part of any tab
-  // Orders that are part of a tab (regardless of tab status) should only be viewed through the tab
-  const standaloneOrders = (result.orders || []).filter(
-    (order: any) => !order.tabId
-  );
+    // Fetch ALL user's tabs (open, closed, paid - all statuses)
+    allTabs = await TabService.listAllTabsForUser(session.userId);
+
+    // Show only orders that are NOT part of any tab
+    standaloneOrders = (result.orders || []).filter(
+      (order: any) => !order.tabId
+    );
+  } else if (session.isGuest) {
+    // Guest Logic
+    // Guests mainly use tabs for now. 
+    // If we want to show past orders for guests, we'd need to track them by guestId in OrderService too.
+    
+    if (session.guestId) {
+      // We can reuse listOpenTabs but here we want ALL tabs? 
+      // TabService.listOpenTabs only returns open ones.
+      // Let's check if we can list all tabs for guest.
+      // Currently TabService doesn't have listAllTabsForGuest.
+      // We can fallback to listOpenTabs for now or use listOpenTabs logic but without status filter?
+      // Actually, let's just use listOpenTabs for guests as they likely only care about current session.
+      
+      const openTabs = await TabService.listOpenTabs({ guestId: session.guestId });
+      allTabs = openTabs;
+    } else if (session.email) {
+      const openTabs = await TabService.listOpenTabs({ customerEmail: session.email });
+      allTabs = openTabs;
+    }
+  }
 
   // Serialize for client components
   const serializedOrders = standaloneOrders.map((order: any) => JSON.parse(JSON.stringify(order)));

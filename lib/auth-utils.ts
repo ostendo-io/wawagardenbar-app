@@ -26,3 +26,29 @@ export function validateEmail(email: string): boolean {
 export function sanitizeEmail(email: string): string {
   return email.toLowerCase().trim();
 }
+
+export function validatePhone(phone: string): boolean {
+  // Basic validation: allows +, spaces, dashes, but must have digits
+  // We'll strip non-digits/plus before checking length
+  const clean = phone.replace(/[^\d+]/g, '');
+  return clean.length >= 10 && clean.length <= 15;
+}
+
+export function sanitizePhone(phone: string): string {
+  // Remove all non-digit characters except leading +
+  // This ensures consistent formatting: +2348084079411
+  let sanitized = phone.trim();
+  
+  // Keep the leading + if present
+  const hasPlus = sanitized.startsWith('+');
+  
+  // Remove all non-digits
+  sanitized = sanitized.replace(/\D/g, '');
+  
+  // Add back the + if it was there
+  if (hasPlus && !sanitized.startsWith('+')) {
+    sanitized = '+' + sanitized;
+  }
+  
+  return sanitized;
+}

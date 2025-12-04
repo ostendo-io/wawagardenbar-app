@@ -55,13 +55,18 @@ const userSchema = new Schema<IUser>(
     name: { type: String, trim: true }, // Computed virtual or stored
     email: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true, // Allows multiple null values (though we try to avoid nulls)
       lowercase: true,
       trim: true,
     },
     emailVerified: { type: Boolean, default: false },
-    phone: { type: String, trim: true },
+    phone: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      trim: true 
+    },
     phoneVerified: { type: Boolean, default: false },
     profilePicture: { type: String, trim: true },
     
@@ -115,7 +120,7 @@ const userSchema = new Schema<IUser>(
 userSchema.index({ sessionToken: 1 });
 userSchema.index({ createdAt: -1 });
 // email index is already created via unique: true in schema definition
-userSchema.index({ phone: 1 });
+// phone index is already created via unique: true in schema definition
 userSchema.index({ 'addresses.isDefault': 1 });
 
 // Instance Methods

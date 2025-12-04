@@ -2,41 +2,44 @@
 
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
-import { sendVerificationPinEmail, sendWelcomeEmail } from '@/lib/email';
+import { SMSService } from '@/lib/sms';
 import {
   generatePin,
   getPinExpirationTime,
-  sanitizeEmail,
-  validateEmail,
+  sanitizePhone,
+  validatePhone,
 } from '@/lib/auth-utils';
 
 interface SendPinResult {
   success: boolean;
   message: string;
   isNewUser?: boolean;
+  errorCode?: string;
+  canRetryWithEmail?: boolean;
 }
 
-export async function sendPinAction(email: string): Promise<SendPinResult> {
+export async function sendPinAction(phone: string): Promise<SendPinResult> {
   try {
-    if (!email || !validateEmail(email)) {
+    if (!phone || !validatePhone(phone)) {
       return {
         success: false,
-        message: 'Please provide a valid email address',
+        message: 'Please provide a valid phone number',
       };
     }
 
-    const sanitizedEmail = sanitizeEmail(email);
+    const sanitizedPhone = sanitizePhone(phone);
 
     await connectDB();
 
-    let user = await UserModel.findOne({ email: sanitizedEmail });
+    let user = await UserModel.findOne({ phone: sanitizedPhone });
     const isNewUser = !user;
 
     if (!user) {
       user = await UserModel.create({
-        email: sanitizedEmail,
-        emailVerified: false,
+        phone: sanitizedPhone,
+        phoneVerified: false,
         isGuest: false,
+        // Email is optional and sparse, so we don't need to set it
       });
     }
 
@@ -47,19 +50,40 @@ export async function sendPinAction(email: string): Promise<SendPinResult> {
     user.pinExpiresAt = pinExpiresAt;
     await user.save();
 
-    await sendVerificationPinEmail(sanitizedEmail, pin);
+    // Send PIN via SMS
+    const smsResult = await SMSService.sendVerificationPinSMS(sanitizedPhone, pin);
 
-    if (isNewUser) {
-      try {
-        await sendWelcomeEmail(sanitizedEmail, user.name);
-      } catch (error) {
-        console.error('Failed to send welcome email:', error);
+    if (!smsResult.success) {
+      console.error('Failed to send SMS PIN to', sanitizedPhone, smsResult);
+      
+      // Provide specific error messages based on error code
+      let userMessage = 'Failed to send verification PIN via SMS.';
+      let canRetryWithEmail = true;
+      
+      if (smsResult.errorCode === 'DND_REJECTION') {
+        userMessage = 'Unable to send SMS to this number. This number may be on a Do Not Disturb list.';
+      } else if (smsResult.errorCode === 'INVALID_PHONE') {
+        userMessage = 'The phone number format is invalid. Please check and try again.';
+        canRetryWithEmail = false; // Invalid phone shouldn't allow email retry
+      } else if (smsResult.errorCode === 'SERVICE_DISABLED') {
+        userMessage = 'SMS service is currently unavailable.';
+      } else if (smsResult.errorCode === 'INSUFFICIENT_BALANCE') {
+        userMessage = 'SMS service is temporarily unavailable.';
+      } else if (smsResult.message) {
+        userMessage = smsResult.message;
       }
+      
+      return {
+        success: false,
+        message: userMessage,
+        errorCode: smsResult.errorCode,
+        canRetryWithEmail,
+      };
     }
 
     return {
       success: true,
-      message: 'Verification PIN sent to your email',
+      message: 'Verification PIN sent to your phone',
       isNewUser,
     };
   } catch (error) {

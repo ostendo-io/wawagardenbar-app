@@ -20,6 +20,8 @@ import { Minus, Plus, AlertCircle, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCartStore } from '@/stores/cart-store';
 import { validateCartItem } from '@/app/actions/cart/cart-actions';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 interface MenuItemDetailModalProps {
   item: MenuItemWithStock;
@@ -33,6 +35,8 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
   const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
   const { addItem, openCart } = useCartStore();
+  const { session } = useAuth();
+  const router = useRouter();
 
   const isOutOfStock = item.stockStatus === 'out-of-stock';
   const isLowStock = item.stockStatus === 'low-stock';
@@ -53,6 +57,16 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
   }
 
   async function handleAddToCart() {
+    // Check if user is logged in
+    if (!session?.isLoggedIn) {
+      toast({
+        title: 'Login Required',
+        description: 'Please register to continue',
+      });
+      router.push('/login?redirect=/menu');
+      return;
+    }
+
     setIsAdding(true);
     
     try {

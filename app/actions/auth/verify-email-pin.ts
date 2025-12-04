@@ -5,61 +5,61 @@ import { getIronSession } from 'iron-session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
 import { sessionOptions, SessionData } from '@/lib/session';
-import {
-  generateSessionToken,
-  isPinExpired,
-  sanitizePhone,
-  validatePhone,
-} from '@/lib/auth-utils';
+import { validateEmail } from '@/lib/auth-utils';
 
-interface VerifyPinResult {
+interface VerifyEmailPinResult {
   success: boolean;
   message: string;
-  userId?: string;
 }
 
-export async function verifyPinAction(
-  phone: string,
+export async function verifyEmailPinAction(
+  email: string,
   pin: string
-): Promise<VerifyPinResult> {
+): Promise<VerifyEmailPinResult> {
   try {
-    if (!phone || !pin) {
+    if (!email || !validateEmail(email)) {
       return {
         success: false,
-        message: 'Phone number and PIN are required',
+        message: 'Invalid email address',
       };
     }
 
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    if (!pin || pin.length !== 4) {
       return {
         success: false,
-        message: 'Invalid PIN format',
+        message: 'Invalid PIN',
       };
     }
-
-    const sanitizedPhone = sanitizePhone(phone);
 
     await connectDB();
 
-    const user = await UserModel.findOne({ phone: sanitizedPhone }).select(
-      '+verificationPin +pinExpiresAt'
-    );
+    const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+verificationPin +pinExpiresAt');
 
     if (!user) {
+      console.error('User not found for email:', email);
       return {
         success: false,
         message: 'User not found',
       };
     }
 
+    console.log('Verifying email PIN for user:', {
+      userId: user._id,
+      email: user.email,
+      phone: user.phone,
+      hasPIN: !!user.verificationPin,
+      pinExpiry: user.pinExpiresAt
+    });
+
     if (!user.verificationPin || !user.pinExpiresAt) {
+      console.error('No PIN found for user:', user._id);
       return {
         success: false,
         message: 'No verification PIN found. Please request a new one.',
       };
     }
 
-    if (isPinExpired(user.pinExpiresAt)) {
+    if (new Date() > user.pinExpiresAt) {
       return {
         success: false,
         message: 'PIN has expired. Please request a new one.',
@@ -69,41 +69,36 @@ export async function verifyPinAction(
     if (user.verificationPin !== pin) {
       return {
         success: false,
-        message: 'Invalid PIN',
+        message: 'Invalid PIN. Please try again.',
       };
     }
 
-    const sessionToken = generateSessionToken();
-    user.sessionToken = sessionToken;
-    user.phoneVerified = true; // Mark phone as verified
-    user.lastLoginAt = new Date();
+    // PIN is valid - mark email as verified and clear PIN
+    user.emailVerified = true;
     user.verificationPin = undefined;
     user.pinExpiresAt = undefined;
     await user.save();
 
+    // Create session
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(
-      cookieStore,
-      sessionOptions
-    );
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
     session.userId = user._id.toString();
-    session.email = user.email || undefined;
+    session.email = user.email;
     session.phone = user.phone;
     session.role = user.role;
     session.isGuest = false;
     session.isLoggedIn = true;
-    session.createdAt = Date.now();
+    session.createdAt = Date.now(); // Also add creation timestamp for consistency
 
     await session.save();
 
     return {
       success: true,
-      message: 'Successfully logged in',
-      userId: user._id.toString(),
+      message: 'Email verified successfully',
     };
   } catch (error) {
-    console.error('Verify PIN error:', error);
+    console.error('Verify email PIN error:', error);
     return {
       success: false,
       message: 'Failed to verify PIN. Please try again.',

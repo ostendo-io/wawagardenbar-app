@@ -28,6 +28,7 @@ export class TabService {
     customerName?: string;
     customerEmail?: string;
     customerPhone?: string;
+    guestId?: string;
   }): Promise<ITab> {
     await connectDB();
 
@@ -43,6 +44,7 @@ export class TabService {
       customerName: params.customerName,
       customerEmail: params.customerEmail,
       customerPhone: params.customerPhone,
+      guestId: params.guestId,
       status: 'open',
       orders: [],
       subtotal: 0,
@@ -67,6 +69,22 @@ export class TabService {
 
     const tab = await TabModel.findOne({
       userId: new Types.ObjectId(userId),
+      status: 'open',
+    })
+      .populate('orders')
+      .lean();
+
+    return tab ? JSON.parse(JSON.stringify(tab)) : null;
+  }
+
+  /**
+   * Get open tab for a guest
+   */
+  static async getOpenTabForGuest(guestId: string): Promise<ITab | null> {
+    await connectDB();
+
+    const tab = await TabModel.findOne({
+      guestId,
       status: 'open',
     })
       .populate('orders')
@@ -296,6 +314,7 @@ export class TabService {
     userId?: string;
     openedByStaffId?: string;
     customerEmail?: string;
+    guestId?: string;
   }): Promise<ITab[]> {
     await connectDB();
 
@@ -309,6 +328,9 @@ export class TabService {
     }
     if (filters?.customerEmail) {
       query.customerEmail = filters.customerEmail;
+    }
+    if (filters?.guestId) {
+      query.guestId = filters.guestId;
     }
     if (filters?.openedByStaffId) {
       query.openedByStaffId = new Types.ObjectId(filters.openedByStaffId);

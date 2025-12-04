@@ -3,7 +3,8 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { OrderService } from '@/services';
+import { OrderService, SystemSettingsService } from '@/services';
+import { UserModel } from '@/models';
 import { sessionOptions, SessionData } from '@/lib/session';
 import {
   sendOrderConfirmationEmail,
@@ -11,6 +12,7 @@ import {
   sendOrderCancellationEmail,
   sendSupportTicketEmail,
 } from '@/lib/email';
+import { SMSService } from '@/lib/sms';
 import { emitOrderStatusUpdate, emitOrderChange } from '@/lib/socket-server';
 
 export interface ActionResult<T = unknown> {
@@ -33,27 +35,65 @@ export async function sendOrderConfirmationAction(
       return { success: false, error: 'Order not found' };
     }
 
-    const email = order.userId ? order.guestEmail || '' : order.guestEmail || '';
+    // Check notification preferences
+    const settings = await SystemSettingsService.getNotificationSettings();
     
-    if (!email) {
-      return { success: false, error: 'No email address found' };
+    // Get phone number
+    let phone = order.guestPhone;
+    if (!phone && order.userId) {
+      const user = await UserModel.findById(order.userId).select('phone');
+      if (user) phone = user.phone;
     }
 
-    await sendOrderConfirmationEmail(email, {
-      orderNumber: order.orderNumber,
-      orderType: order.orderType,
-      items: order.items.map((item) => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.subtotal,
-      })),
-      total: order.total,
-      estimatedWaitTime: order.estimatedWaitTime,
-    });
+    // Send SMS if enabled
+    if (
+      settings.smsEnabled && 
+      (settings.channels.orders === 'sms' || settings.channels.orders === 'both') &&
+      phone
+    ) {
+      const smsResult = await SMSService.sendOrderConfirmationSMS(
+        phone,
+        order.orderNumber,
+        order.total,
+        order.estimatedWaitTime
+      );
+      
+      if (!smsResult.success) {
+        console.error('Failed to send order confirmation SMS:', smsResult);
+      }
+    }
+
+    // Send Email if enabled/fallback
+    if (
+      settings.channels.orders === 'email' || 
+      settings.channels.orders === 'both' ||
+      !settings.smsEnabled
+    ) {
+      const email = order.userId ? order.guestEmail || '' : order.guestEmail || '';
+      
+      if (!email) {
+        // Only fail if email was strictly required or no phone was available for SMS
+        if (!phone || settings.channels.orders === 'email') {
+           return { success: false, error: 'No email address found' };
+        }
+      } else {
+        await sendOrderConfirmationEmail(email, {
+          orderNumber: order.orderNumber,
+          orderType: order.orderType,
+          items: order.items.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.subtotal,
+          })),
+          total: order.total,
+          estimatedWaitTime: order.estimatedWaitTime,
+        });
+      }
+    }
 
     return {
       success: true,
-      message: 'Confirmation email sent',
+      message: 'Confirmation notification sent',
     };
   } catch (error) {
     console.error('Error sending order confirmation email:', error);
@@ -87,25 +127,58 @@ export async function sendOrderStatusNotificationAction(
       note
     );
 
-    // Send email notification
-    const email = order.userId ? order.guestEmail || '' : order.guestEmail || '';
+    // Check notification preferences
+    const settings = await SystemSettingsService.getNotificationSettings();
     
-    if (email) {
-      const statusMessages: Record<string, string> = {
-        confirmed: 'Your order has been confirmed and is being prepared.',
-        preparing: 'Our kitchen is preparing your order.',
-        ready: 'Your order is ready!',
-        'out-for-delivery': 'Your order is on the way!',
-        delivered: 'Your order has been delivered. Enjoy!',
-        completed: 'Your order is complete. Thank you!',
-      };
+    // Get phone number
+    let phone = order.guestPhone;
+    if (!phone && order.userId) {
+      const user = await UserModel.findById(order.userId).select('phone');
+      if (user) phone = user.phone;
+    }
 
-      await sendOrderStatusUpdateEmail(
-        email,
+    // Send SMS if enabled
+    if (
+      settings.smsEnabled && 
+      (settings.channels.orders === 'sms' || settings.channels.orders === 'both') &&
+      phone
+    ) {
+      const smsResult = await SMSService.sendOrderStatusSMS(
+        phone,
         order.orderNumber,
-        newStatus,
-        note || statusMessages[newStatus] || 'Your order status has been updated.'
+        newStatus
       );
+      
+      if (!smsResult.success) {
+        console.error('Failed to send status update SMS:', smsResult);
+      }
+    }
+
+    // Send email notification
+    if (
+      settings.channels.orders === 'email' || 
+      settings.channels.orders === 'both' ||
+      !settings.smsEnabled
+    ) {
+      const email = order.userId ? order.guestEmail || '' : order.guestEmail || '';
+      
+      if (email) {
+        const statusMessages: Record<string, string> = {
+          confirmed: 'Your order has been confirmed and is being prepared.',
+          preparing: 'Our kitchen is preparing your order.',
+          ready: 'Your order is ready!',
+          'out-for-delivery': 'Your order is on the way!',
+          delivered: 'Your order has been delivered. Enjoy!',
+          completed: 'Your order is complete. Thank you!',
+        };
+
+        await sendOrderStatusUpdateEmail(
+          email,
+          order.orderNumber,
+          newStatus,
+          note || statusMessages[newStatus] || 'Your order status has been updated.'
+        );
+      }
     }
 
     return {

@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { NotificationSettingsForm } from './notification-settings-form';
 
 /**
  * Settings form schema
@@ -97,13 +98,21 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 interface SettingsFormProps {
   initialSettings: SettingsFormValues;
+  notificationSettings: {
+    smsEnabled: boolean;
+    emailEnabled: boolean;
+    channels: {
+      auth: 'email' | 'sms' | 'both';
+      orders: 'email' | 'sms' | 'both';
+    };
+  };
 }
 
 /**
  * Settings form component
  * Allows super-admin to update application settings
  */
-export function SettingsForm({ initialSettings }: SettingsFormProps) {
+export function SettingsForm({ initialSettings, notificationSettings }: SettingsFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -151,16 +160,21 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Tabs defaultValue="fees" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="fees">Fees & Pricing</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="hours">Business Hours</TabsTrigger>
-            <TabsTrigger value="contact">Contact Info</TabsTrigger>
-          </TabsList>
+    <Tabs defaultValue="fees" className="w-full">
+      <TabsList className="grid w-full grid-cols-5">
+        <TabsTrigger value="fees">Fees & Pricing</TabsTrigger>
+        <TabsTrigger value="orders">Orders</TabsTrigger>
+        <TabsTrigger value="hours">Business Hours</TabsTrigger>
+        <TabsTrigger value="contact">Contact Info</TabsTrigger>
+        <TabsTrigger value="notifications">Notifications</TabsTrigger>
+      </TabsList>
 
+      <TabsContent value="notifications" className="space-y-6">
+        <NotificationSettingsForm initialSettings={notificationSettings} />
+      </TabsContent>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Fees & Pricing Tab */}
           <TabsContent value="fees" className="space-y-6">
             <div className="space-y-4">
@@ -658,25 +672,25 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               />
             </div>
           </TabsContent>
-        </Tabs>
 
-        {/* Submit Button */}
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Settings
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Settings
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </Tabs>
   );
 }
