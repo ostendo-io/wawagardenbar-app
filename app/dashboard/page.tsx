@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth-middleware';
 import { OrderService } from '@/services';
 import { IOrder } from '@/interfaces';
@@ -215,7 +216,12 @@ function MetricsSkeleton() {
  * Admin dashboard home page
  */
 export default async function DashboardPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
+
+  // Redirect regular admins to orders page since they don't have access to overview
+  if (session.role === 'admin') {
+    redirect('/dashboard/orders');
+  }
 
   return (
     <div className="space-y-6">

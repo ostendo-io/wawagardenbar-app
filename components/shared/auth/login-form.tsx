@@ -406,9 +406,9 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
 
       {authMethod === 'sms' && (
         <div className="mt-6">
-          <Alert className="bg-secondary/20 border-secondary/50">
-            <Mail className="h-4 w-4 text-primary" />
-            <AlertDescription className="ml-2 text-foreground">
+          <Alert className="bg-amber-50 border-amber-200 shadow-sm">
+            <Mail className="h-5 w-5 text-amber-600" />
+            <AlertDescription className="ml-3 text-base text-amber-900">
               Having trouble receiving the SMS? You can{' '}
               <button
                 type="button"
@@ -416,7 +416,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
                   setStep('email');
                   setSmsError(null);
                 }}
-                className="font-medium text-primary hover:underline"
+                className="font-semibold text-amber-700 hover:text-amber-900 underline decoration-amber-700/30 underline-offset-4 hover:decoration-amber-900"
                 disabled={isLoading}
               >
                 verify via email

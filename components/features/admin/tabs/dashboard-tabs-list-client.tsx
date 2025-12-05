@@ -42,11 +42,19 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState<Tab | null>(null);
   const [showPayDialog, setShowPayDialog] = useState(false);
+  const [currentFilters, setCurrentFilters] = useState<{
+    statuses: string[];
+    dateRange?: DateRange;
+  }>({
+    statuses: [],
+    dateRange: undefined
+  });
 
   const handleFilterChange = async (filters: {
     statuses: string[];
     dateRange?: DateRange;
   }) => {
+    setCurrentFilters(filters);
     setIsLoading(true);
     
     try {
@@ -242,6 +250,7 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
           total={selectedTab.total}
           open={showPayDialog}
           onOpenChange={setShowPayDialog}
+          onSuccess={() => handleFilterChange(currentFilters)}
         />
       )}
     </div>

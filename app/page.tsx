@@ -45,7 +45,7 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <div className="mb-2 flex justify-center">
-                  <UtensilsCrossed className="h-12 w-12 text-primary" />
+                  <UtensilsCrossed className="h-8 w-8 text-primary" />
                 </div>
                 <CardTitle className="text-center">Dine In</CardTitle>
                 <CardDescription className="text-center">
@@ -54,7 +54,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-sm text-muted-foreground">
-                  Quick and easy ordering from your table
+                  For the best experience, select "Dine In" during checkout to have your food and drinks brought right to your table.
                 </p>
               </CardContent>
             </Card>
@@ -62,7 +62,7 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <div className="mb-2 flex justify-center">
-                  <Clock className="h-12 w-12 text-primary" />
+                  <Clock className="h-8 w-8 text-primary" />
                 </div>
                 <CardTitle className="text-center">Pickup</CardTitle>
                 <CardDescription className="text-center">
@@ -79,7 +79,7 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <div className="mb-2 flex justify-center">
-                  <Truck className="h-12 w-12 text-primary" />
+                  <Truck className="h-8 w-8 text-primary" />
                 </div>
                 <CardTitle className="text-center">Delivery</CardTitle>
                 <CardDescription className="text-center">

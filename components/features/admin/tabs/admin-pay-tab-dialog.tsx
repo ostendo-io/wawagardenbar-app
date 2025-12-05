@@ -26,6 +26,7 @@ interface AdminPayTabDialogProps {
   total: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 /**
@@ -39,6 +40,7 @@ export function AdminPayTabDialog({
   total,
   open,
   onOpenChange,
+  onSuccess,
 }: AdminPayTabDialogProps) {
   const [paymentMethod, setPaymentMethod] = useState<'manual' | 'checkout'>('manual');
   const [paymentType, setPaymentType] = useState<'cash' | 'transfer' | 'card'>('cash');
@@ -75,6 +77,9 @@ export function AdminPayTabDialog({
         setPaymentReference('');
         setComments('');
         onOpenChange(false);
+        if (onSuccess) {
+          onSuccess();
+        }
         router.refresh();
       } else {
         toast({
