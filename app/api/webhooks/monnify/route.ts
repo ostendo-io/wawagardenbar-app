@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
+import { MonnifyService } from '@/services/monnify-service';
 import { PaymentService } from '@/services/payment-service';
 import { InventoryService, RewardsService, TabService } from '@/services';
 import { MonnifyWebhookPayload } from '@/interfaces/payment';
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('monnify-signature') || '';
 
     // Verify webhook signature
-    if (!PaymentService.validateWebhookSignature(rawBody, signature)) {
+    if (!MonnifyService.validateWebhookSignature(rawBody, signature)) {
       console.error('Invalid webhook signature');
       return NextResponse.json(
         { error: 'Invalid signature' },
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
         order.statusHistory.push({
           status: 'confirmed',
           timestamp: new Date(),
-          note: `Payment confirmed via ${PaymentService.getPaymentMethodName(payload.paymentMethod)}`,
+          note: `Payment confirmed via ${MonnifyService.getPaymentMethodName(payload.paymentMethod)}`,
         });
 
         console.log('Order confirmed:', order._id);

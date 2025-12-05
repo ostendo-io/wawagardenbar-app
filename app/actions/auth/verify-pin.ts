@@ -9,7 +9,6 @@ import {
   generateSessionToken,
   isPinExpired,
   sanitizePhone,
-  validatePhone,
 } from '@/lib/auth-utils';
 
 interface VerifyPinResult {
