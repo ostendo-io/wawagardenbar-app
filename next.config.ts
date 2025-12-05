@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone', // Optimize for Docker deployment
   images: {
     formats: ['image/webp'],
     remotePatterns: [],

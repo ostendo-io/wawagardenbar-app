@@ -56,3 +56,19 @@ logs
 .editorconfig
 tsconfig.tsbuildinfo
 
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+DOCKER.md
+.docker-quick-ref.md
+
+# Scripts (not needed in production)
+scripts
+
+# Uploads (should be volume-mounted)
+public/uploads
+
+# Windsurf
+.windsurf
+
