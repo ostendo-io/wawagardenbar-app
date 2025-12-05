@@ -55,6 +55,33 @@ export class RewardsService {
   }
 
   /**
+   * Award points for social actions (e.g. Instagram)
+   */
+  static async awardSocialPoints(
+    userId: string,
+    points: number,
+    description: string,
+    referenceId: string
+  ): Promise<void> {
+    await connectDB();
+    
+    // Dynamically import PointsService to avoid circular dependencies if any
+    const { PointsService } = await import('./points-service');
+    
+    // Use a "system" ID or generic ID for the order/rule reference since this is social
+    // For now we pass undefined for orderId and a new ObjectId for rule/reference
+    const refObjectId = new Types.ObjectId(); 
+    
+    await PointsService.awardPoints(
+      userId,
+      points,
+      undefined, // No order ID
+      refObjectId, // Using a generated ID as reference
+      `${description} (Ref: ${referenceId})`
+    );
+  }
+
+  /**
    * Calculate and randomly select a reward based on eligible rules
    */
   static async calculateReward(

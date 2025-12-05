@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Percent, DollarSign, Gift, Star } from 'lucide-react';
+import { Loader2, Percent, DollarSign, Gift, Star, Instagram } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { addYears } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,15 @@ const formSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters').max(500),
   isActive: z.boolean(),
   spendThreshold: z.coerce.number().min(0, 'Must be 0 or greater'),
+  triggerType: z.enum(['transaction', 'social_instagram']).default('transaction'),
+  socialConfig: z.object({
+    platform: z.enum(['instagram']),
+    hashtag: z.string().min(2, 'Hashtag required'),
+    minViews: z.coerce.number().min(0),
+    maxPostsPerPeriod: z.coerce.number().min(1),
+    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
+    pointsAwarded: z.coerce.number().min(1),
+  }).optional(),
   rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']),
   rewardValue: z.coerce.number().positive('Must be positive'),
   freeItemId: z.string().nullable().optional(),
@@ -151,6 +160,15 @@ export function RewardRuleForm({
       description: initialData?.description || '',
       isActive: initialData?.isActive ?? true,
       spendThreshold: initialData?.spendThreshold || 0,
+      triggerType: initialData?.triggerType || 'transaction',
+      socialConfig: initialData?.socialConfig ? {
+        platform: 'instagram',
+        hashtag: initialData.socialConfig.hashtag,
+        minViews: initialData.socialConfig.minViews,
+        maxPostsPerPeriod: initialData.socialConfig.maxPostsPerPeriod,
+        periodType: initialData.socialConfig.periodType,
+        pointsAwarded: initialData.socialConfig.pointsAwarded,
+      } : undefined,
       rewardType: initialData?.rewardType || 'discount-percentage',
       rewardValue: initialData?.rewardValue || 10,
       freeItemId: initialData?.freeItemId?.toString() || null,
@@ -167,6 +185,7 @@ export function RewardRuleForm({
   });
 
   const rewardType = watch('rewardType');
+  const triggerType = watch('triggerType');
   const isActive = watch('isActive');
   const selectedType = rewardTypes.find((t) => t.value === rewardType);
 
@@ -174,6 +193,13 @@ export function RewardRuleForm({
   useEffect(() => {
     setValue('probability', probabilityValue);
   }, [probabilityValue, setValue]);
+
+  // Force loyalty-points type when social trigger is selected
+  useEffect(() => {
+    if (triggerType === 'social_instagram') {
+      setValue('rewardType', 'loyalty-points');
+    }
+  }, [triggerType, setValue]);
 
   // Update form values when date ranges change
   useEffect(() => {
@@ -276,6 +302,180 @@ export function RewardRuleForm({
         </CardContent>
       </Card>
 
+      {/* Rule Trigger */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Rule Trigger</CardTitle>
+          <CardDescription>What event triggers this reward?</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Trigger Type</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div
+                className={`flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors ${
+                  triggerType === 'transaction'
+                    ? 'border-primary bg-primary/5'
+                    : 'hover:bg-muted'
+                }`}
+                onClick={() => setValue('triggerType', 'transaction')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-background p-2 shadow-sm">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-medium">Transaction Based</div>
+                    <div className="text-xs text-muted-foreground">
+                      Reward triggered by purchase
+                    </div>
+                  </div>
+                </div>
+                {triggerType === 'transaction' && (
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+
+              <div
+                className={`flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors ${
+                  triggerType === 'social_instagram'
+                    ? 'border-primary bg-primary/5'
+                    : 'hover:bg-muted'
+                }`}
+                onClick={() => setValue('triggerType', 'social_instagram')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-background p-2 shadow-sm">
+                    <Instagram className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-medium">Instagram Engagement</div>
+                    <div className="text-xs text-muted-foreground">
+                      Reward triggered by posts/tags
+                    </div>
+                  </div>
+                </div>
+                {triggerType === 'social_instagram' && (
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Instagram Configuration */}
+      {triggerType === 'social_instagram' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Instagram Configuration</CardTitle>
+            <CardDescription>
+              Configure the requirements for the Instagram reward
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="socialConfig.hashtag">Hashtag *</Label>
+                <Input
+                  id="socialConfig.hashtag"
+                  placeholder="#wawagardenbar"
+                  {...register('socialConfig.hashtag')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The hashtag users must include in their post
+                </p>
+                {errors.socialConfig?.hashtag && (
+                  <p className="text-sm text-red-600">
+                    {errors.socialConfig.hashtag.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="socialConfig.minViews">Minimum Views</Label>
+                <Input
+                  id="socialConfig.minViews"
+                  type="number"
+                  min="0"
+                  placeholder="100"
+                  {...register('socialConfig.minViews')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum engagement/views required to qualify
+                </p>
+                {errors.socialConfig?.minViews && (
+                  <p className="text-sm text-red-600">
+                    {errors.socialConfig.minViews.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="socialConfig.maxPostsPerPeriod">
+                  Max Posts Per Period
+                </Label>
+                <Input
+                  id="socialConfig.maxPostsPerPeriod"
+                  type="number"
+                  min="1"
+                  placeholder="3"
+                  {...register('socialConfig.maxPostsPerPeriod')}
+                />
+                {errors.socialConfig?.maxPostsPerPeriod && (
+                  <p className="text-sm text-red-600">
+                    {errors.socialConfig.maxPostsPerPeriod.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="socialConfig.periodType">Period Type</Label>
+                <Select
+                  value={watch('socialConfig.periodType') || 'weekly'}
+                  onValueChange={(value: any) =>
+                    setValue('socialConfig.periodType', value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="campaign_duration">Campaign Duration</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                 <Label htmlFor="socialConfig.pointsAwarded">Points to Award *</Label>
+                 <Input
+                  id="socialConfig.pointsAwarded"
+                  type="number"
+                  min="1"
+                  placeholder="500"
+                  {...register('socialConfig.pointsAwarded')}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setValue('socialConfig.pointsAwarded', val);
+                    setValue('rewardValue', val); // Sync with main reward value
+                  }}
+                 />
+                 {errors.socialConfig?.pointsAwarded && (
+                  <p className="text-sm text-red-600">
+                    {errors.socialConfig.pointsAwarded.message}
+                  </p>
+                )}
+              </div>
+              
+               {/* Hidden field to set platform */}
+               <input type="hidden" {...register('socialConfig.platform')} value="instagram" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Spend Threshold */}
       <Card>
         <CardHeader>
@@ -303,78 +503,80 @@ export function RewardRuleForm({
         </CardContent>
       </Card>
 
-      {/* Reward Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Reward Configuration</CardTitle>
-          <CardDescription>Type and value of the reward</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="rewardType">Reward Type *</Label>
-            <Select
-              value={rewardType}
-              onValueChange={(value: string) => setValue('rewardType', value as any)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {rewardTypes.map((type) => {
-                  const Icon = type.icon;
-                  return (
-                    <SelectItem key={type.value} value={type.value}>
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">{type.label}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {type.description}
+      {/* Reward Configuration - Only show for transaction triggers */}
+      {triggerType === 'transaction' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reward Configuration</CardTitle>
+            <CardDescription>Type and value of the reward</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="rewardType">Reward Type *</Label>
+              <Select
+                value={rewardType}
+                onValueChange={(value: string) => setValue('rewardType', value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {rewardTypes.map((type) => {
+                    const Icon = type.icon;
+                    return (
+                      <SelectItem key={type.value} value={type.value}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">{type.label}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {type.description}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedType && !('requiresItemSelection' in selectedType) && (
-            <div className="space-y-2">
-              <Label htmlFor="rewardValue">{selectedType.valueLabel} *</Label>
-              <Input
-                id="rewardValue"
-                type="number"
-                min={'valueMin' in selectedType ? selectedType.valueMin : undefined}
-                max={'valueMax' in selectedType ? selectedType.valueMax : undefined}
-                placeholder={selectedType.placeholder}
-                {...register('rewardValue')}
-              />
-              {errors.rewardValue && (
-                <p className="text-sm text-red-600">{errors.rewardValue.message}</p>
-              )}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          {selectedType && 'requiresItemSelection' in selectedType && selectedType.requiresItemSelection && (
-            <div className="space-y-2">
-              <Label htmlFor="freeItemId">Free Menu Item *</Label>
-              <Input
-                id="freeItemId"
-                placeholder="Menu item ID (to be replaced with selector)"
-                {...register('freeItemId')}
-              />
-              {errors.freeItemId && (
-                <p className="text-sm text-red-600">{errors.freeItemId.message}</p>
-              )}
-              <p className="text-sm text-muted-foreground">
-                Note: Menu item selector to be implemented
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {selectedType && !('requiresItemSelection' in selectedType) && (
+              <div className="space-y-2">
+                <Label htmlFor="rewardValue">{selectedType.valueLabel} *</Label>
+                <Input
+                  id="rewardValue"
+                  type="number"
+                  min={'valueMin' in selectedType ? selectedType.valueMin : undefined}
+                  max={'valueMax' in selectedType ? selectedType.valueMax : undefined}
+                  placeholder={selectedType.placeholder}
+                  {...register('rewardValue')}
+                />
+                {errors.rewardValue && (
+                  <p className="text-sm text-red-600">{errors.rewardValue.message}</p>
+                )}
+              </div>
+            )}
+
+            {selectedType && 'requiresItemSelection' in selectedType && selectedType.requiresItemSelection && (
+              <div className="space-y-2">
+                <Label htmlFor="freeItemId">Free Menu Item *</Label>
+                <Input
+                  id="freeItemId"
+                  placeholder="Menu item ID (to be replaced with selector)"
+                  {...register('freeItemId')}
+                />
+                {errors.freeItemId && (
+                  <p className="text-sm text-red-600">{errors.freeItemId.message}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Note: Menu item selector to be implemented
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Probability & Limits */}
       <Card>

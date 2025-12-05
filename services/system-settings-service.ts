@@ -223,6 +223,89 @@ export class SystemSettingsService {
   }
 
   /**
+   * Get payment gateway settings
+   */
+  static async getPaymentSettings(): Promise<{
+    activeProvider: 'monnify' | 'paystack';
+    paystack: {
+      enabled: boolean;
+      mode: 'test' | 'live';
+      publicKey?: string;
+      secretKey?: string;
+    };
+    monnify: {
+      enabled: boolean;
+    };
+  }> {
+    await connectDB();
+    
+    const setting = await SystemSettingsModel.findOne({
+      key: 'payment-gateway-config',
+    });
+    
+    const defaults = {
+      activeProvider: 'monnify' as const,
+      paystack: {
+        enabled: false,
+        mode: 'test' as const,
+        publicKey: '',
+        secretKey: '',
+      },
+      monnify: {
+        enabled: true,
+      },
+    };
+    
+    return { ...defaults, ...(setting?.value || {}) };
+  }
+
+  /**
+   * Update payment gateway settings
+   */
+  static async updatePaymentSettings(
+    settings: {
+      activeProvider: 'monnify' | 'paystack';
+      paystack: {
+        enabled: boolean;
+        mode: 'test' | 'live';
+        publicKey: string;
+        secretKey: string;
+      };
+    },
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+    
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'payment-gateway-config' },
+      {
+        $set: {
+          value: settings,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: { 
+              ...settings, 
+              paystack: { 
+                ...settings.paystack, 
+                secretKey: '***MASKED***' // Don't log secret key in history
+              } 
+            },
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Payment gateway settings updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+    
+    return true;
+  }
+
+  /**
    * Initialize default settings
    */
   static async initializeDefaults(): Promise<void> {

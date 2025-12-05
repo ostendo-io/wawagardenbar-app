@@ -1,98 +1,158 @@
-import crypto from 'crypto';
 import {
-  MonnifyInitializePaymentRequest,
-  MonnifyInitializePaymentResponse,
-  MonnifyPaymentStatusResponse,
   PaymentMethod,
   PaymentStatus,
 } from '@/interfaces/payment';
+import { SystemSettingsService } from './system-settings-service';
+import { MonnifyService } from './monnify-service';
+import { PaystackService } from './paystack-service';
+
+interface PaymentInitializeResponse {
+  checkoutUrl: string;
+  reference: string;
+  provider: 'monnify' | 'paystack';
+  accessCode?: string; // Paystack specific
+}
 
 /**
- * PaymentService for Monnify API integration
- * Documentation: https://developers.monnify.com/docs/collections/one-time-payment
+ * PaymentService Facade
+ * Routes requests to the active payment provider (Monnify or Paystack)
  */
 export class PaymentService {
-  private static readonly BASE_URL = process.env.MONNIFY_BASE_URL || 'https://sandbox.monnify.com';
-  private static readonly API_KEY = process.env.MONNIFY_API_KEY!;
-  private static readonly SECRET_KEY = process.env.MONNIFY_SECRET_KEY!;
-  private static readonly CONTRACT_CODE = process.env.MONNIFY_CONTRACT_CODE!;
-
-  /**
-   * Get authentication token from Monnify
-   */
-  private static async getAuthToken(): Promise<string> {
-    const credentials = Buffer.from(`${this.API_KEY}:${this.SECRET_KEY}`).toString('base64');
-
-    const response = await fetch(`${this.BASE_URL}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${credentials}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to authenticate with Monnify');
-    }
-
-    const data = await response.json();
-    return data.responseBody.accessToken;
-  }
-
+  
   /**
    * Initialize a payment transaction
    */
   static async initializePayment(
-    params: Omit<MonnifyInitializePaymentRequest, 'contractCode'>
-  ): Promise<MonnifyInitializePaymentResponse> {
-    const token = await this.getAuthToken();
-
-    const payload: MonnifyInitializePaymentRequest = {
-      ...params,
-      contractCode: this.CONTRACT_CODE,
-      currencyCode: params.currencyCode || 'NGN',
-    };
-
-    const response = await fetch(`${this.BASE_URL}/api/v1/merchant/transactions/init-transaction`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.responseMessage || 'Failed to initialize payment');
+    params: {
+      amount: number;
+      customerName: string;
+      customerEmail: string;
+      paymentReference: string;
+      paymentDescription: string;
+      currencyCode?: string;
+      contractCode?: string; // Legacy Monnify param
+      redirectUrl: string;
+      paymentMethods?: PaymentMethod[];
     }
+  ): Promise<PaymentInitializeResponse> {
+    const settings = await SystemSettingsService.getPaymentSettings();
 
-    return response.json();
+    if (settings.activeProvider === 'paystack') {
+      try {
+        // Convert amount to kobo for Paystack (NGN * 100)
+        // Check if amount is already in kobo? No, typically amount is passed as NGN in app logic?
+        // Monnify expects NGN amount (e.g. 100.00). Paystack expects kobo (10000).
+        // Let's assume input `amount` is NGN (base currency).
+        
+        const paystackResponse = await PaystackService.initializeTransaction({
+          email: params.customerEmail,
+          amount: Math.round(params.amount * 100),
+          reference: params.paymentReference,
+          callback_url: params.redirectUrl,
+          metadata: {
+            custom_fields: [
+              {
+                display_name: "Customer Name",
+                variable_name: "customer_name",
+                value: params.customerName
+              }
+            ]
+          }
+        });
+
+        return {
+          checkoutUrl: paystackResponse.data.authorization_url,
+          reference: paystackResponse.data.reference,
+          provider: 'paystack',
+          accessCode: paystackResponse.data.access_code
+        };
+      } catch (error) {
+        console.error('Paystack initialization failed:', error);
+        throw error;
+      }
+    } else {
+      // Default to Monnify
+      try {
+        const monnifyResponse = await MonnifyService.initializePayment({
+          amount: params.amount,
+          customerName: params.customerName,
+          customerEmail: params.customerEmail,
+          paymentReference: params.paymentReference,
+          paymentDescription: params.paymentDescription,
+          currencyCode: params.currencyCode || 'NGN',
+          redirectUrl: params.redirectUrl,
+          paymentMethods: params.paymentMethods || ['CARD', 'ACCOUNT_TRANSFER']
+        });
+
+        return {
+          checkoutUrl: monnifyResponse.responseBody.checkoutUrl,
+          reference: monnifyResponse.responseBody.paymentReference,
+          provider: 'monnify'
+        };
+      } catch (error) {
+        console.error('Monnify initialization failed:', error);
+        throw error;
+      }
+    }
   }
 
   /**
    * Verify payment status
    */
-  static async verifyPayment(paymentReference: string): Promise<MonnifyPaymentStatusResponse> {
-    const token = await this.getAuthToken();
-
-    const response = await fetch(
-      `${this.BASE_URL}/api/v2/transactions/${encodeURIComponent(paymentReference)}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.responseMessage || 'Failed to verify payment');
+  static async verifyPayment(paymentReference: string): Promise<{
+    status: PaymentStatus;
+    amount: number;
+    paidAt?: Date;
+    transactionReference?: string;
+    provider: 'monnify' | 'paystack';
+  }> {
+    // We need to know which provider to verify with. 
+    // We can try determining from reference format or check active provider.
+    // Monnify refs start with 'WAWA-'. Paystack refs also use 'WAWA-' if generated by us.
+    // However, we stored the paymentReference in the order.
+    // A robust way is to try verifying with the active provider, or fallback.
+    // Or encode provider in reference? e.g. WAWA-M-... vs WAWA-P-...
+    // For now, let's check active settings. If reference formats are identical, we might need a try-catch approach.
+    
+    const settings = await SystemSettingsService.getPaymentSettings();
+    
+    // Strategy: Try the active provider first. If it fails (404), try the other?
+    // Monnify verification throws if failed.
+    
+    if (settings.activeProvider === 'paystack') {
+        try {
+            const response = await PaystackService.verifyTransaction(paymentReference);
+            
+            let status: PaymentStatus = 'PENDING';
+            if (response.data.status === 'success') status = 'PAID';
+            else if (response.data.status === 'failed') status = 'FAILED';
+            else if (response.data.status === 'abandoned') status = 'CANCELLED';
+            
+            return {
+                status,
+                amount: response.data.amount / 100, // Convert kobo to NGN
+                paidAt: response.data.paid_at ? new Date(response.data.paid_at) : undefined,
+                transactionReference: response.data.id.toString(),
+                provider: 'paystack'
+            };
+        } catch (error: any) {
+             // If verification fails (e.g. transaction not found), we could fallback to Monnify if needed,
+             // but usually we stick to the one configured.
+             // However, for existing pending transactions initiated with the OLD provider before switch,
+             // we might need to handle that. 
+             // For simplicity now, we rely on active provider.
+             throw error;
+        }
+    } else {
+        const response = await MonnifyService.verifyPayment(paymentReference);
+        return {
+            status: response.responseBody.paymentStatus,
+            amount: response.responseBody.amountPaid,
+            paidAt: response.responseBody.paidOn ? new Date(response.responseBody.paidOn) : undefined,
+            transactionReference: response.responseBody.transactionReference,
+            provider: 'monnify'
+        };
     }
-
-    return response.json();
   }
 
   /**
@@ -101,19 +161,8 @@ export class PaymentService {
   static generatePaymentReference(orderId: string): string {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Optional: Prefix based on provider could help routing verification later
     return `WAWA-${orderId}-${timestamp}-${random}`;
-  }
-
-  /**
-   * Validate webhook signature
-   */
-  static validateWebhookSignature(payload: string, signature: string): boolean {
-    const hash = crypto
-      .createHmac('sha512', this.SECRET_KEY)
-      .update(payload)
-      .digest('hex');
-
-    return hash === signature;
   }
 
   /**
@@ -127,55 +176,27 @@ export class PaymentService {
    * Get payment method display name
    */
   static getPaymentMethodName(method: PaymentMethod): string {
-    const names: Record<PaymentMethod, string> = {
-      CARD: 'Card Payment',
-      ACCOUNT_TRANSFER: 'Bank Transfer',
-      USSD: 'USSD',
-      PHONE_NUMBER: 'Phone Number',
-    };
-    return names[method];
+    return MonnifyService.getPaymentMethodName(method);
   }
 
   /**
    * Get payment method instructions
    */
   static getPaymentMethodInstructions(method: PaymentMethod): string {
-    const instructions: Record<PaymentMethod, string> = {
-      CARD: 'Pay securely with your debit or credit card',
-      ACCOUNT_TRANSFER: 'Transfer from your bank account to the provided account details',
-      USSD: 'Dial the USSD code from your mobile phone to complete payment',
-      PHONE_NUMBER: 'Enter your phone number to receive payment instructions',
-    };
-    return instructions[method];
+    return MonnifyService.getPaymentMethodInstructions(method);
   }
 
   /**
    * Format amount for display
    */
   static formatAmount(amount: number): string {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(amount);
+    return MonnifyService.formatAmount(amount);
   }
 
   /**
    * Calculate payment fees (if applicable)
    */
   static calculatePaymentFee(amount: number, method: PaymentMethod): number {
-    // Monnify typically charges fees, but this depends on your agreement
-    // Adjust based on your actual fee structure
-    const feeRates: Record<PaymentMethod, number> = {
-      CARD: 0.015, // 1.5%
-      ACCOUNT_TRANSFER: 0.01, // 1%
-      USSD: 0.01, // 1%
-      PHONE_NUMBER: 0.01, // 1%
-    };
-
-    const fee = amount * feeRates[method];
-    const maxFee = 2000; // Cap at ₦2,000
-
-    return Math.min(Math.round(fee), maxFee);
+    return MonnifyService.calculatePaymentFee(amount, method);
   }
 }

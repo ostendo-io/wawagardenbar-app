@@ -7,6 +7,19 @@ const rewardRuleSchema = new Schema<IRewardRule>(
     description: { type: String, required: true },
     isActive: { type: Boolean, default: true },
     spendThreshold: { type: Number, required: true, min: 0 },
+    triggerType: {
+      type: String,
+      enum: ['transaction', 'social_instagram'],
+      default: 'transaction',
+    },
+    socialConfig: {
+      platform: { type: String, enum: ['instagram'] },
+      hashtag: { type: String },
+      minViews: { type: Number },
+      maxPostsPerPeriod: { type: Number },
+      periodType: { type: String, enum: ['weekly', 'monthly', 'campaign_duration'] },
+      pointsAwarded: { type: Number },
+    },
     rewardType: {
       type: String,
       enum: [

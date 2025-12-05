@@ -220,6 +220,7 @@ export async function getTopPerformingRulesAction(
       { $unwind: '$rule' },
       {
         $project: {
+          _id: 0,
           ruleId: { $toString: '$_id' },
           ruleName: '$rule.name',
           issued: 1,

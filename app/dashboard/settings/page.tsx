@@ -3,6 +3,10 @@ import { SettingsService } from '@/services';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsForm } from '@/components/features/admin/settings-form';
+import { PaymentSettingsForm } from '@/components/features/admin/payment-settings-form';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { UserX } from 'lucide-react';
 
 export const metadata = {
   title: 'Settings | Admin Dashboard',
@@ -17,9 +21,10 @@ export default async function SettingsPage() {
   await requireSuperAdmin();
 
   // Get current settings
-  const [settings, notificationSettings] = await Promise.all([
+  const [settings, notificationSettings, paymentSettings] = await Promise.all([
     SettingsService.getSettings(),
-    SystemSettingsService.getNotificationSettings()
+    SystemSettingsService.getNotificationSettings(),
+    SystemSettingsService.getPaymentSettings(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
@@ -55,6 +60,29 @@ export default async function SettingsPage() {
           Manage application settings and configuration
         </p>
       </div>
+
+      {/* Data Requests */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle>Data Management</CardTitle>
+            <CardDescription>
+              Manage user data deletion requests
+            </CardDescription>
+          </div>
+          <UserX className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/dashboard/settings/data-requests">
+              View Deletion Requests
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Payment Settings */}
+      <PaymentSettingsForm initialSettings={paymentSettings} />
 
       {/* Settings Form */}
       <Card>

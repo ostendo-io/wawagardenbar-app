@@ -4,6 +4,7 @@ export type AuditAction =
   | 'user.create'
   | 'user.update'
   | 'user.delete'
+  | 'user.delete_request'
   | 'user.role-change'
   | 'menu.create'
   | 'menu.update'

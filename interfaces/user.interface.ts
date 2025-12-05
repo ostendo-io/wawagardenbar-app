@@ -37,6 +37,19 @@ export interface IPaymentMethod {
 
 export type UserRole = 'customer' | 'admin' | 'super-admin';
 
+export interface ISocialProfile {
+  handle: string;
+  lastCheckedAt?: Date;
+  verified?: boolean;
+  profileUrl?: string;
+}
+
+export interface ISocialProfiles {
+  instagram?: ISocialProfile;
+  twitter?: ISocialProfile;
+  facebook?: ISocialProfile;
+}
+
 export interface IUser {
   _id: Types.ObjectId;
   // Basic Information
@@ -49,6 +62,9 @@ export interface IUser {
   phoneVerified?: boolean;
   profilePicture?: string;
   
+  // Social Profiles
+  socialProfiles?: ISocialProfiles;
+
   // Authentication
   role: UserRole;
   verificationPin?: string;

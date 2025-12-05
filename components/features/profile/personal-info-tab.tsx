@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ const profileSchema = z.object({
     .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format (use E.164 format)')
     .optional()
     .or(z.literal('')),
+  instagramHandle: z.string().max(30, 'Handle is too long').optional().or(z.literal('')),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -45,6 +46,7 @@ export function PersonalInfoTab({ profile }: PersonalInfoTabProps) {
       firstName: profile.firstName || '',
       lastName: profile.lastName || '',
       phone: profile.phone || '',
+      instagramHandle: profile.socialProfiles?.instagram?.handle || '',
     },
   });
 
@@ -139,6 +141,29 @@ export function PersonalInfoTab({ profile }: PersonalInfoTabProps) {
           )}
           <p className="text-xs text-muted-foreground">
             Use international format (e.g., +234XXXXXXXXXX)
+          </p>
+        </div>
+
+        {/* Instagram Handle */}
+        <div className="space-y-2">
+          <Label htmlFor="instagramHandle" className="flex items-center gap-2">
+            <Instagram className="h-4 w-4" />
+            Instagram Handle
+          </Label>
+          <div className="relative">
+            <span className="absolute left-3 top-2.5 text-muted-foreground">@</span>
+            <Input
+              id="instagramHandle"
+              {...register('instagramHandle')}
+              placeholder="username"
+              className="pl-7"
+            />
+          </div>
+          {errors.instagramHandle && (
+            <p className="text-sm text-destructive">{errors.instagramHandle.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Add your Instagram handle to participate in social rewards!
           </p>
         </div>
 

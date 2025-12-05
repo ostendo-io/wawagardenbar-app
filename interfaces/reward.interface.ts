@@ -4,6 +4,17 @@ export type RewardType = 'discount-percentage' | 'discount-fixed' | 'free-item' 
 
 export type RewardStatus = 'pending' | 'active' | 'redeemed' | 'expired';
 
+export type RewardTriggerType = 'transaction' | 'social_instagram';
+
+export interface ISocialRewardConfig {
+  platform: 'instagram';
+  hashtag: string;
+  minViews: number;
+  maxPostsPerPeriod: number;
+  periodType: 'weekly' | 'monthly' | 'campaign_duration';
+  pointsAwarded: number;
+}
+
 export interface IRewardRule {
   _id: Types.ObjectId;
   name: string;
@@ -11,6 +22,8 @@ export interface IRewardRule {
   isActive: boolean;
   spendThreshold: number;
   rewardType: RewardType;
+  triggerType?: RewardTriggerType;
+  socialConfig?: ISocialRewardConfig;
   rewardValue: number;
   freeItemId?: Types.ObjectId;
   probability: number;

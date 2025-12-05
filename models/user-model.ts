@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IUser, IAddress, IPaymentMethod, IPreferences } from '@/interfaces';
+import { IUser, IAddress, IPaymentMethod, IPreferences, ISocialProfiles } from '@/interfaces';
 
 const addressSchema = new Schema<IAddress>(
   {
@@ -18,6 +18,25 @@ const addressSchema = new Schema<IAddress>(
     lastUsedAt: { type: Date },
   },
   { timestamps: true }
+);
+
+const socialProfileSchema = new Schema(
+  {
+    handle: { type: String, trim: true, required: true },
+    lastCheckedAt: { type: Date },
+    verified: { type: Boolean, default: false },
+    profileUrl: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const socialProfilesSchema = new Schema<ISocialProfiles>(
+  {
+    instagram: { type: socialProfileSchema },
+    twitter: { type: socialProfileSchema },
+    facebook: { type: socialProfileSchema },
+  },
+  { _id: false }
 );
 
 const preferencesSchema = new Schema<IPreferences>(
@@ -56,7 +75,7 @@ const userSchema = new Schema<IUser>(
     email: {
       type: String,
       unique: true,
-      sparse: true, // Allows multiple null values (though we try to avoid nulls)
+      sparse: true, // Allows multiple documents to lack this field
       lowercase: true,
       trim: true,
     },
@@ -70,6 +89,9 @@ const userSchema = new Schema<IUser>(
     phoneVerified: { type: Boolean, default: false },
     profilePicture: { type: String, trim: true },
     
+    // Social Profiles
+    socialProfiles: { type: socialProfilesSchema, default: {} },
+
     // Authentication
     role: {
       type: String,

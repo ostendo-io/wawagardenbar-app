@@ -33,6 +33,7 @@ export class ProfileService {
       lastName?: string;
       phone?: string;
       preferences?: Partial<IUser['preferences']>;
+      socialProfiles?: Partial<IUser['socialProfiles']>;
     }
   ): Promise<IUser | null> {
     await connectDB();
@@ -53,6 +54,13 @@ export class ProfileService {
       if (data.preferences.language) {
         updateData['preferences.language'] = data.preferences.language;
       }
+    }
+
+    if (data.socialProfiles) {
+      if (data.socialProfiles.instagram) {
+        updateData['socialProfiles.instagram'] = data.socialProfiles.instagram;
+      }
+      // Add other social profiles here if needed
     }
 
     const user = await User.findByIdAndUpdate(

@@ -37,11 +37,64 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   });
 }
 
+export async function sendAccountDeletionEmail(email: string): Promise<void> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Account Deleted</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .container { background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .alert { background: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; }
+          .alert h2 { color: #b91c1c; margin: 0 0 10px 0; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="alert">
+            <h2>Account Deleted</h2>
+            <p>Your account and personal data have been permanently deleted from our systems as per your request.</p>
+          </div>
+          
+          <p>We are sorry to see you go. If you ever wish to return, you are welcome to create a new account at any time.</p>
+          
+          <p>Thank you for being a part of Wawa Garden Bar.</p>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Wawa Garden Bar</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+    ACCOUNT DELETED
+    
+    Your account and personal data have been permanently deleted from our systems as per your request.
+    
+    We are sorry to see you go. Thank you for being a part of Wawa Garden Bar.
+    
+    © ${new Date().getFullYear()} Wawa Garden Bar
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: 'Account Deletion Confirmation',
+    html,
+    text,
+  });
+}
+
 export async function sendVerificationPinEmail(
   email: string,
   pin: string
 ): Promise<void> {
   const html = `
+    <!DOCTYPE html>
     <!DOCTYPE html>
     <html>
       <head>

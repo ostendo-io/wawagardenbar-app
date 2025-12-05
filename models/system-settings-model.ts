@@ -23,7 +23,7 @@ const systemSettingsSchema = new Schema<ISystemSettings>(
       type: String,
       required: true,
       unique: true,
-      enum: ['points-conversion-rate', 'service-fee', 'tax-rate', 'notification-preferences'],
+      enum: ['points-conversion-rate', 'service-fee', 'tax-rate', 'notification-preferences', 'payment-gateway-config'],
     },
     value: { type: Schema.Types.Mixed, required: true },
     description: { type: String },

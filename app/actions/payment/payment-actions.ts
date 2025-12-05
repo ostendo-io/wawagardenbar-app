@@ -254,7 +254,7 @@ export async function initializePayment(
     // Generate payment reference
     const paymentReference = PaymentService.generatePaymentReference(input.orderId);
 
-    // Initialize payment with Monnify
+    // Initialize payment (routes to active provider)
     const response = await PaymentService.initializePayment({
       amount: input.amount,
       customerName: input.customerName,
@@ -263,31 +263,19 @@ export async function initializePayment(
       paymentDescription: `Order #${input.orderId.slice(-8)}`,
       paymentMethods: input.paymentMethods,
       redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/orders/${input.orderId}?payment=success`,
-      metadata: {
-        orderId: input.orderId,
-        orderType: order.orderType,
-      },
     });
-
-    if (!response.requestSuccessful) {
-      return {
-        success: false,
-        message: response.responseMessage || 'Failed to initialize payment',
-      };
-    }
 
     // Update order with payment reference
     order.paymentReference = paymentReference;
-    order.transactionReference = response.responseBody.transactionReference;
     await order.save();
 
     return {
       success: true,
       data: {
-        transactionReference: response.responseBody.transactionReference,
+        transactionReference: response.reference,
         paymentReference,
-        checkoutUrl: response.responseBody.checkoutUrl,
-        enabledPaymentMethods: response.responseBody.enabledPaymentMethod,
+        checkoutUrl: response.checkoutUrl,
+        enabledPaymentMethods: input.paymentMethods,
       },
     };
   } catch (error) {
@@ -308,17 +296,8 @@ export async function verifyPayment(
   try {
     await connectDB();
 
-    // Verify with Monnify
+    // Verify payment (routes to active provider)
     const response = await PaymentService.verifyPayment(paymentReference);
-
-    if (!response.requestSuccessful) {
-      return {
-        success: false,
-        message: response.responseMessage || 'Failed to verify payment',
-      };
-    }
-
-    const paymentData = response.responseBody;
 
     // Try to find order first
     const order = await Order.findOne({ paymentReference });
@@ -336,26 +315,26 @@ export async function verifyPayment(
         'PARTIALLY_PAID': 'pending',
         'EXPIRED': 'failed',
       };
-      order.paymentStatus = statusMap[paymentData.paymentStatus] || 'pending';
-      order.transactionReference = paymentData.transactionReference;
-      order.paidAt = paymentData.paidOn ? new Date(paymentData.paidOn) : undefined;
+      order.paymentStatus = statusMap[response.status] || 'pending';
+      order.transactionReference = response.transactionReference;
+      order.paidAt = response.paidAt;
 
-      if (PaymentService.isPaymentSuccessful(paymentData.paymentStatus)) {
+      if (PaymentService.isPaymentSuccessful(response.status)) {
         order.status = 'confirmed';
-      } else if (paymentData.paymentStatus === 'FAILED') {
+      } else if (response.status === 'FAILED') {
         order.status = 'cancelled';
       }
 
       await order.save();
     } else if (tab) {
       // Handle tab payment
-      if (PaymentService.isPaymentSuccessful(paymentData.paymentStatus)) {
+      if (PaymentService.isPaymentSuccessful(response.status)) {
         await TabService.markTabPaid(
           tab._id.toString(),
           paymentReference,
-          paymentData.transactionReference
+          response.transactionReference || ''
         );
-      } else if (paymentData.paymentStatus === 'FAILED') {
+      } else if (response.status === 'FAILED') {
         tab.paymentStatus = 'failed';
         tab.status = 'open'; // Reopen tab if payment failed
         await tab.save();
@@ -365,12 +344,12 @@ export async function verifyPayment(
     return {
       success: true,
       data: {
-        transactionReference: paymentData.transactionReference,
-        paymentReference: paymentData.paymentReference,
-        amountPaid: paymentData.amountPaid,
-        paymentStatus: paymentData.paymentStatus,
-        paymentMethod: paymentData.paymentMethod,
-        paidOn: paymentData.paidOn,
+        transactionReference: response.transactionReference || '',
+        paymentReference,
+        amountPaid: response.amount,
+        paymentStatus: response.status,
+        paymentMethod: 'CARD', // Generic fallback
+        paidOn: response.paidAt?.toISOString() || '',
       },
     };
   } catch (error) {
@@ -493,7 +472,7 @@ export async function initializeTabPayment(params: {
     // Generate payment reference
     const paymentReference = PaymentService.generatePaymentReference(params.tabId);
 
-    // Initialize payment with Monnify
+    // Initialize payment (routes to active provider)
     const response = await PaymentService.initializePayment({
       amount: tab.total,
       customerName: params.customerName,
@@ -502,24 +481,12 @@ export async function initializeTabPayment(params: {
       paymentDescription: `Tab #${tab.tabNumber}`,
       paymentMethods: params.paymentMethods,
       redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/orders/tabs/${params.tabId}?payment=success`,
-      metadata: {
-        tabId: params.tabId,
-        tableNumber: tab.tableNumber,
-      },
     });
-
-    if (!response.requestSuccessful) {
-      return {
-        success: false,
-        message: response.responseMessage || 'Failed to initialize payment',
-      };
-    }
 
     // Update tab with payment reference
     const tabDoc = await TabModel.findById(params.tabId);
     if (tabDoc) {
       tabDoc.paymentReference = paymentReference;
-      tabDoc.transactionReference = response.responseBody.transactionReference;
       tabDoc.status = 'settling';
       await tabDoc.save();
     }
@@ -527,10 +494,10 @@ export async function initializeTabPayment(params: {
     return {
       success: true,
       data: {
-        transactionReference: response.responseBody.transactionReference,
+        transactionReference: response.reference,
         paymentReference,
-        checkoutUrl: response.responseBody.checkoutUrl,
-        enabledPaymentMethods: response.responseBody.enabledPaymentMethod,
+        checkoutUrl: response.checkoutUrl,
+        enabledPaymentMethods: params.paymentMethods,
       },
     };
   } catch (error) {
