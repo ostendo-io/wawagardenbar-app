@@ -28,8 +28,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init for proper signal handling (ignore errors for cross-platform builds)
+RUN apk add --no-cache dumb-init || echo "dumb-init installation failed, will use direct execution"
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -68,7 +68,7 @@ ENV HOSTNAME="0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start application with dumb-init for proper signal handling
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["npm", "start"]
+# Start application with dumb-init for proper signal handling (if available)
+# Use shell form to handle dumb-init availability gracefully
+CMD ["sh", "-c", "if command -v dumb-init >/dev/null 2>&1; then exec dumb-init -- npm start; else exec npm start; fi"]
 
