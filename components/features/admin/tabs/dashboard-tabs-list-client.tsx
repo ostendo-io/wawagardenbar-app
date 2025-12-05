@@ -5,7 +5,7 @@ import { DateRange } from 'react-day-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Receipt, Eye, CreditCard, Loader2 } from 'lucide-react';
+import { Receipt, Eye, CreditCard, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardTabsFilter } from './dashboard-tabs-filter';
 import { AdminPayTabDialog } from './admin-pay-tab-dialog';
@@ -196,7 +196,7 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {tab.status === 'open' && (
+                    {tab.status === 'open' ? (
                       <Button
                         variant="default"
                         size="sm"
@@ -208,7 +208,17 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                         <CreditCard className="mr-2 h-4 w-4" />
                         Customer Wants to Pay
                       </Button>
-                    )}
+                    ) : tab.status === 'closed' || tab.paymentStatus === 'paid' ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled
+                        className="cursor-not-allowed opacity-80"
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
+                        Tab Paid
+                      </Button>
+                    ) : null}
                     <Link href={`/dashboard/orders/tabs/${tab._id}`}>
                       <Button variant="outline" size="sm">
                         <Eye className="mr-2 h-4 w-4" />

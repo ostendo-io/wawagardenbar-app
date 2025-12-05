@@ -43,7 +43,8 @@ export function OrderStatusDialog({
     if (status === 'success') {
       clearCart();
     }
-    onOpenChange(false);
+    // Don't close the dialog - let the navigation handle unmounting
+    // This prevents the parent's onOpenChange from triggering a redirect to /menu
     if (redirectUrl) {
       router.push(redirectUrl);
     }

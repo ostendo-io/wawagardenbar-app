@@ -15,6 +15,7 @@ export interface CartItem {
 interface CartStore {
   items: CartItem[];
   isOpen: boolean;
+  tableNumber?: string;
   
   // Actions
   addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
@@ -25,6 +26,7 @@ interface CartStore {
   toggleCart: () => void;
   openCart: () => void;
   closeCart: () => void;
+  setTableNumber: (tableNumber: string) => void;
   
   // Computed values
   getTotalItems: () => number;
@@ -37,6 +39,7 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      tableNumber: undefined,
 
       addItem: (item) => {
         const existingItem = get().items.find((i) => i.id === item.id);
@@ -94,7 +97,7 @@ export const useCartStore = create<CartStore>()(
       },
 
       clearCart: () => {
-        set({ items: [] });
+        set({ items: [], tableNumber: undefined });
       },
 
       toggleCart: () => {
@@ -107,6 +110,10 @@ export const useCartStore = create<CartStore>()(
 
       closeCart: () => {
         set({ isOpen: false });
+      },
+
+      setTableNumber: (tableNumber) => {
+        set({ tableNumber });
       },
 
       getTotalItems: () => {
@@ -127,8 +134,8 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: 'wawa-cart-storage',
-      // Only persist items, not UI state
-      partialize: (state) => ({ items: state.items }),
+      // Only persist items and tableNumber, not UI state
+      partialize: (state) => ({ items: state.items, tableNumber: state.tableNumber }),
     }
   )
 );

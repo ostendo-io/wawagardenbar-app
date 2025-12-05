@@ -427,3 +427,62 @@ export async function closeTabAction(
     };
   }
 }
+
+/**
+ * Create a new tab (Admin/Staff)
+ * Allows creating a tab without customer details, only table number
+ */
+export async function createAdminTabAction(params: {
+  tableNumber: string;
+}): Promise<ActionResult<{ tab: ITab }>> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
+    // Check if user is staff/admin
+    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+      return {
+        success: false,
+        error: 'Unauthorized',
+      };
+    }
+
+    if (!params.tableNumber) {
+      return {
+        success: false,
+        error: 'Table number is required',
+      };
+    }
+
+    // Check if there's already an open tab for this table
+    const existingTab = await TabService.getOpenTabForTable(params.tableNumber);
+    if (existingTab) {
+      return {
+        success: false,
+        error: 'There is already an open tab for this table',
+      };
+    }
+
+    const tab = await TabService.createTab({
+      tableNumber: params.tableNumber,
+      openedByStaffId: session.userId,
+      customerName: 'Walk-in Customer', // Default name
+    });
+
+    revalidatePath('/orders');
+    revalidatePath('/dashboard/orders');
+    revalidatePath('/dashboard/orders/tabs');
+
+    return {
+      success: true,
+      message: 'Tab created successfully',
+      data: { tab },
+    };
+  } catch (error) {
+    console.error('Error creating admin tab:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create tab',
+    };
+  }
+}

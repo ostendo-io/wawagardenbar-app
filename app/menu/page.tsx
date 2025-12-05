@@ -4,6 +4,7 @@ import { MainLayout } from '@/components/shared/layout';
 import { Container } from '@/components/shared/layout';
 import { MenuContent } from '@/components/features/menu/menu-content';
 import { MenuSkeleton } from '@/components/features/menu/menu-skeleton';
+import { TableNumberSetter } from '@/components/features/menu/table-number-setter';
 import { CategoryService } from '@/services/category-service';
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ interface MenuPageProps {
   searchParams: Promise<{
     category?: string;
     search?: string;
+    tableNumber?: string;
   }>;
 }
 
@@ -32,6 +34,7 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
 
   return (
     <MainLayout>
+      <TableNumberSetter tableNumber={params.tableNumber} />
       <Container size="xl" className="py-8">
         <Suspense fallback={<MenuSkeleton />}>
           <MenuContent

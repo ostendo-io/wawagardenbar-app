@@ -18,7 +18,7 @@ import { TipInputStep } from './tip-input-step';
 import { OrderSummary } from './order-summary';
 import { OrderStatusDialog } from './order-status-dialog';
 import { createOrder, initializePayment } from '@/app/actions/payment/payment-actions';
-import { createTabAction, getOpenTabForUserAction } from '@/app/actions/tabs/tab-actions';
+import { createTabAction, getOpenTabForUserAction, getOpenTabForTableAction } from '@/app/actions/tabs/tab-actions';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { ITab } from '@/interfaces';
 import { useAuth } from '@/hooks/use-auth';
@@ -77,12 +77,14 @@ const baseSteps = [
 export function CheckoutForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { items, getTotalPrice, clearCart } = useCartStore();
-  const { user, isAuthenticated, isLoading: isLoadingUser } = useAuth();
+  const { items, getTotalPrice, clearCart, tableNumber: storeTableNumber } = useCartStore();
+  const { user, isAuthenticated, role, isLoading: isLoadingUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [existingTab, setExistingTab] = useState<ITab | null>(null);
+  const [isTableLocked, setIsTableLocked] = useState(false);
+  const [isTabOccupied, setIsTabOccupied] = useState(false);
   const [steps, setSteps] = useState(baseSteps);
   const [isPreFilled, setIsPreFilled] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
@@ -133,21 +135,97 @@ export function CheckoutForm() {
     }
   }, [isAuthenticated, user, form]);
 
-  // Fetch existing tab for user when dine-in is selected
+  // Initialize order type and table number from store
+  useEffect(() => {
+    if (storeTableNumber) {
+      form.setValue('orderType', 'dine-in');
+      form.setValue('tableNumber', storeTableNumber);
+      // We don't lock the table here, allowing admin/staff to change it if needed
+      setIsTableLocked(false);
+    }
+  }, [storeTableNumber, form]);
+
+  // Fetch existing tab for user when dine-in is selected (Initial load)
   useEffect(() => {
     async function fetchExistingTab() {
       if (orderType === 'dine-in') {
+        // Priority: Check if we have a specific table number from store
+        if (storeTableNumber) {
+          const result = await getOpenTabForTableAction(storeTableNumber);
+          if (result.success && result.data?.tab) {
+            setExistingTab(result.data.tab);
+            form.setValue('tableNumber', storeTableNumber);
+            form.setValue('useTab', 'existing-tab');
+            // Don't lock for storeTableNumber (admin use case)
+            setIsTableLocked(false); 
+            return;
+          }
+        }
+
+        // Fallback: Check for user's own open tab (Customer use case)
         const result = await getOpenTabForUserAction();
         if (result.success && result.data?.tab) {
           setExistingTab(result.data.tab);
           // Pre-populate table number from existing tab
           form.setValue('tableNumber', result.data.tab.tableNumber);
           form.setValue('useTab', 'existing-tab');
+          // Lock table number for customer who already has a tab
+          setIsTableLocked(true);
         }
       }
     }
     fetchExistingTab();
-  }, [orderType, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderType, storeTableNumber]); // Removed form dependency to avoid loop, added specific deps
+
+  // Watch table number input and check for existing tabs (Debounced)
+  useEffect(() => {
+    // If table is locked, we don't need to search as it's already set
+    if (isTableLocked || !tableNumber) return;
+
+    // Reset occupied status when input changes (before search)
+    setIsTabOccupied(false);
+
+    const timer = setTimeout(async () => {
+      // Only search if table number has content
+      if (tableNumber.length < 1) return;
+
+      try {
+        const result = await getOpenTabForTableAction(tableNumber);
+        if (result.success && result.data?.tab) {
+          const tab = result.data.tab;
+          console.log('Found existing tab for table', tableNumber);
+          
+          // Check permissions: Admin OR Owner
+          // user.id comes from useAuth hook which fetches from /api/auth/user
+          const isAdmin = role === 'admin' || role === 'super-admin';
+          // Note: tab.userId is likely a string from JSON serialization, user.id is string
+          // Cast to string for comparison to avoid TS error with ObjectId
+          const isMyTab = user?.id && tab.userId?.toString() === user.id;
+
+          if (isAdmin || isMyTab) {
+            setExistingTab(tab);
+            form.setValue('useTab', 'existing-tab');
+            setIsTabOccupied(false);
+          } else {
+            // Tab exists but not authorized to join
+            setExistingTab(null);
+            form.setValue('useTab', 'new-tab'); 
+            setIsTabOccupied(true);
+          }
+        } else {
+          // No tab found
+          setExistingTab(null);
+          form.setValue('useTab', 'new-tab');
+          setIsTabOccupied(false);
+        }
+      } catch (error) {
+        console.error('Error checking table:', error);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [tableNumber, isTableLocked, form, role, user]);
 
   // Adjust steps based on order type and tab choice
   useEffect(() => {
@@ -399,6 +477,13 @@ export function CheckoutForm() {
         fieldsToValidate.push('pickupTime');
       } else if (currentOrderType === 'dine-in') {
         fieldsToValidate.push('tableNumber');
+        
+        // Check if table is occupied (and not ours)
+        if (isTabOccupied) {
+          console.log('Table occupied, preventing next step');
+          setIsNavigating(false);
+          return;
+        }
       }
     } else if (currentStep === 3 && orderType === 'dine-in') {
       // Tab options step for dine-in
@@ -526,7 +611,7 @@ export function CheckoutForm() {
                   ) : (
                     currentStep === 1 && <CustomerInfoStep form={form} isPreFilled={isPreFilled} />
                   )}
-                  {currentStep === 2 && <OrderDetailsStep form={form} hasExistingTab={!!existingTab} />}
+                  {currentStep === 2 && <OrderDetailsStep form={form} isTableLocked={isTableLocked} existingTab={existingTab} isTabOccupied={isTabOccupied} />}
                   {currentStep === 3 && orderType === 'dine-in' && (
                     <TabOptionsStep
                       form={form}
@@ -552,7 +637,7 @@ export function CheckoutForm() {
                     </Button>
 
                     {currentStep < steps.length ? (
-                      <Button type="button" onClick={handleNext}>
+                      <Button type="button" onClick={handleNext} disabled={isTabOccupied}>
                         Next
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>

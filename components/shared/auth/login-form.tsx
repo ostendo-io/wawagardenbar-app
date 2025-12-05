@@ -212,6 +212,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
   }
 
   async function handleResendPin() {
+    setCountdown(60);
     setIsLoading(true);
     try {
       const result = authMethod === 'sms'
@@ -232,6 +233,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           description: result.message,
           variant: 'destructive',
         });
+        setCountdown(0); // Reset countdown on error so user can try again if needed
       }
     } catch (error) {
       toast({
@@ -239,6 +241,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         description: 'Failed to resend PIN. Please try again.',
         variant: 'destructive',
       });
+      setCountdown(0);
     } finally {
       setIsLoading(false);
     }
@@ -394,12 +397,35 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         <button
           type="button"
           onClick={handleResendPin}
-          className="text-primary hover:underline"
-          disabled={isLoading}
+          className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+          disabled={isLoading || countdown > 0}
         >
-          Resend PIN
+          {countdown > 0 ? `Resend in ${countdown}s` : 'Resend PIN'}
         </button>
       </div>
+
+      {authMethod === 'sms' && (
+        <div className="mt-6">
+          <Alert className="bg-secondary/20 border-secondary/50">
+            <Mail className="h-4 w-4 text-primary" />
+            <AlertDescription className="ml-2 text-foreground">
+              Having trouble receiving the SMS? You can{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('email');
+                  setSmsError(null);
+                }}
+                className="font-medium text-primary hover:underline"
+                disabled={isLoading}
+              >
+                verify via email
+              </button>
+              {' '}instead.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
     </form>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, CheckCircle2 } from 'lucide-react';
 import { AdminPayTabDialog } from './admin-pay-tab-dialog';
 
 interface DashboardTabActionsProps {
@@ -24,6 +24,20 @@ export function DashboardTabActions({
   status,
 }: DashboardTabActionsProps) {
   const [showPayDialog, setShowPayDialog] = useState(false);
+
+  if (status === 'closed') {
+    return (
+      <Button
+        size="lg"
+        variant="secondary"
+        disabled
+        className="w-full cursor-not-allowed opacity-80"
+      >
+        <CheckCircle2 className="mr-2 h-5 w-5 text-green-600" />
+        Tab Paid
+      </Button>
+    );
+  }
 
   if (status !== 'open') {
     return null;
