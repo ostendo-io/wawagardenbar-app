@@ -105,19 +105,6 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'dine-in':
-        return '🍽️';
-      case 'pickup':
-        return '🛍️';
-      case 'delivery':
-        return '🚚';
-      default:
-        return '📦';
-    }
-  };
-
   async function handleStatusUpdate(newStatus: string) {
     setIsUpdating(true);
     try {

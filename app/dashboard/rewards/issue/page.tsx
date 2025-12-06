@@ -212,7 +212,7 @@ export default function IssueRewardPage() {
   };
 
   // Check if form can be submitted
-  // const canSubmit = selectedUser !== null && isValid && !isSubmitting;
+  const canSubmit = selectedUser !== null && isValid && !isSubmitting;
 
   return (
     <div className="space-y-6">
@@ -501,6 +501,7 @@ export default function IssueRewardPage() {
                 type="submit"
                 className="w-full"
                 size="lg"
+                disabled={!canSubmit}
               >
                 {isSubmitting ? (
                   <>
