@@ -371,11 +371,16 @@ export function CheckoutForm() {
 
       // If using a tab, don't initialize payment yet
       if (tabId) {
+        // Redirect admins to dashboard, customers to customer view
+        const tabRedirectUrl = (role === 'admin' || role === 'super-admin') 
+          ? `/dashboard/orders/tabs/${tabId}`
+          : `/orders/tabs/${tabId}`;
+        
         setOrderStatus({
           status: 'success',
           title: 'Order Added to Tab!',
           message: 'Your order has been successfully added to your tab. You can add more orders or pay when ready.',
-          redirectUrl: `/orders/tabs/${tabId}`,
+          redirectUrl: tabRedirectUrl,
           redirectLabel: 'View Tab',
         });
         setShowStatusDialog(true);

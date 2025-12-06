@@ -45,7 +45,7 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tabDetails, setTabDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedReward, setSelectedReward] = useState<IReward | null>(null);
+  const [selectedRewards, setSelectedRewards] = useState<IReward[]>([]);
   const [rewardDiscount, setRewardDiscount] = useState(0);
 
   const form = useForm<CheckoutFormData>({
@@ -87,19 +87,21 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
     setIsSubmitting(true);
 
     try {
-      // Redeem reward if selected
-      if (selectedReward) {
-        const redeemResult = await redeemRewardAction(
-          selectedReward._id.toString(),
-          resolvedParams.tabId
-        );
-        
-        if (!redeemResult.success) {
-          toast({
-            title: 'Warning',
-            description: redeemResult.error || 'Failed to apply reward, continuing with payment',
-            variant: 'destructive',
-          });
+      // Redeem all selected rewards
+      if (selectedRewards.length > 0) {
+        for (const reward of selectedRewards) {
+          const redeemResult = await redeemRewardAction(
+            reward._id.toString(),
+            resolvedParams.tabId
+          );
+          
+          if (!redeemResult.success) {
+            toast({
+              title: 'Warning',
+              description: `Failed to apply reward ${reward.code}, continuing with payment`,
+              variant: 'destructive',
+            });
+          }
         }
       }
 
@@ -207,11 +209,11 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
 
               <RewardSelector
                 subtotal={tab.subtotal}
-                onRewardSelect={(reward, discount) => {
-                  setSelectedReward(reward);
+                onRewardSelect={(rewards, discount) => {
+                  setSelectedRewards(rewards);
                   setRewardDiscount(discount);
                 }}
-                selectedRewardId={selectedReward?._id.toString()}
+                selectedRewardIds={selectedRewards.map(r => r._id.toString())}
               />
 
               <Card>

@@ -242,6 +242,10 @@ export async function initializePayment(
   try {
     await connectDB();
 
+    // Get session to check user role
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
     // Get order
     const order = await Order.findById(input.orderId);
     if (!order) {
@@ -254,6 +258,12 @@ export async function initializePayment(
     // Generate payment reference
     const paymentReference = PaymentService.generatePaymentReference(input.orderId);
 
+    // Determine redirect URL based on user role
+    const isAdmin = session.role === 'admin' || session.role === 'super-admin';
+    const redirectUrl = isAdmin
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/${input.orderId}?payment=success`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/orders/${input.orderId}?payment=success`;
+
     // Initialize payment (routes to active provider)
     const response = await PaymentService.initializePayment({
       amount: input.amount,
@@ -262,7 +272,7 @@ export async function initializePayment(
       paymentReference,
       paymentDescription: `Order #${input.orderId.slice(-8)}`,
       paymentMethods: input.paymentMethods,
-      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/orders/${input.orderId}?payment=success`,
+      redirectUrl,
     });
 
     // Update order with payment reference
@@ -472,6 +482,16 @@ export async function initializeTabPayment(params: {
     // Generate payment reference
     const paymentReference = PaymentService.generatePaymentReference(params.tabId);
 
+    // Get session to check user role
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
+    // Determine redirect URL based on user role
+    const isAdmin = session.role === 'admin' || session.role === 'super-admin';
+    const redirectUrl = isAdmin
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/tabs/${params.tabId}?payment=success`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/orders/tabs/${params.tabId}?payment=success`;
+
     // Initialize payment (routes to active provider)
     const response = await PaymentService.initializePayment({
       amount: tab.total,
@@ -480,7 +500,7 @@ export async function initializeTabPayment(params: {
       paymentReference,
       paymentDescription: `Tab #${tab.tabNumber}`,
       paymentMethods: params.paymentMethods,
-      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/orders/tabs/${params.tabId}?payment=success`,
+      redirectUrl,
     });
 
     // Update tab with payment reference

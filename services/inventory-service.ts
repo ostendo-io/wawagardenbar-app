@@ -78,6 +78,75 @@ class InventoryService {
   }
 
   /**
+   * Restore stock for cancelled order
+   * Called when order is cancelled to return items to inventory
+   */
+  static async restoreStockForOrder(orderId: string): Promise<void> {
+    const order = await OrderModel.findById(orderId);
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    // Only restore if inventory was already deducted
+    if (!order.inventoryDeducted) {
+      return;
+    }
+
+    // Loop through order items
+    for (const item of order.items) {
+      const menuItem = await MenuItemModel.findById(item.menuItemId);
+
+      // Skip if item doesn't track inventory
+      if (!menuItem?.trackInventory || !menuItem.inventoryId) {
+        continue;
+      }
+
+      // Get inventory record
+      const inventory = await InventoryModel.findById(menuItem.inventoryId);
+
+      if (!inventory) {
+        continue;
+      }
+
+      // Restore stock
+      inventory.currentStock += item.quantity;
+
+      // Add stock history entry
+      inventory.stockHistory.push({
+        quantity: item.quantity,
+        type: 'addition',
+        reason: 'Order Cancelled',
+        performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
+        timestamp: new Date(),
+        category: 'adjustment',
+        orderId: order._id,
+        performedByName: 'System',
+      } as any);
+
+      // Update status based on stock level
+      if (inventory.currentStock <= 0) {
+        inventory.status = 'out-of-stock';
+      } else if (inventory.currentStock <= inventory.minimumStock) {
+        inventory.status = 'low-stock';
+      } else {
+        inventory.status = 'in-stock';
+      }
+
+      // Update sales tracking (reduce total sales)
+      inventory.totalSales = Math.max(0, inventory.totalSales - item.quantity);
+
+      await inventory.save();
+    }
+
+    // Mark order as inventory restored
+    order.inventoryDeducted = false;
+    order.inventoryDeductedAt = undefined;
+    order.inventoryDeductedBy = undefined;
+    await order.save();
+  }
+
+  /**
    * Check if item is available for ordering
    * Returns true if item can be ordered, false otherwise
    */

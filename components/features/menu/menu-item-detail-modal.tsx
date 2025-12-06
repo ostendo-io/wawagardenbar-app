@@ -98,6 +98,7 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
       toast({
         title: 'Added to Cart',
         description: `${quantity}x ${item.name} added to your cart`,
+        duration: 2000, // Auto-dismiss after 2 seconds
       });
 
       // Open cart sidebar

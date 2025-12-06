@@ -9,6 +9,7 @@ import OrderModel from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { TabService } from '@/services';
+import InventoryService from '@/services/inventory-service';
 import { completeOrderAndDeductStockAction } from '@/app/actions/order/complete-order-action';
 import { emitBatchUpdateEvent, emitOrderUpdatedEvent, emitOrderCancelledEvent } from '@/lib/socket-emit-helper';
 
@@ -484,6 +485,16 @@ export async function cancelOrderAction(
     });
 
     await order.save();
+
+    // Restore inventory if it was deducted
+    if (order.inventoryDeducted) {
+      try {
+        await InventoryService.restoreStockForOrder(orderId);
+      } catch (error) {
+        console.error('Error restoring inventory:', error);
+        // Don't fail the cancellation if inventory restoration fails
+      }
+    }
 
     // If order is part of a tab, recalculate tab totals
     if (order.tabId) {

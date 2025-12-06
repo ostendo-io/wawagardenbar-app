@@ -96,6 +96,21 @@ export class OrderService {
       paymentStatus: 'pending',
     });
 
+    // Deduct inventory immediately upon order creation
+    try {
+      const InventoryService = (await import('./inventory-service')).default;
+      await InventoryService.deductStockForOrder(order._id.toString());
+      
+      // Mark inventory as deducted
+      order.inventoryDeducted = true;
+      order.inventoryDeductedAt = new Date();
+      await order.save();
+    } catch (error) {
+      console.error('Error deducting inventory on order creation:', error);
+      // Continue with order creation even if inventory deduction fails
+      // This prevents blocking order creation due to inventory issues
+    }
+
     return order.toObject();
   }
 
@@ -311,6 +326,18 @@ export class OrderService {
     });
 
     await order.save();
+
+    // Restore inventory if it was deducted
+    if (order.inventoryDeducted) {
+      try {
+        const InventoryService = (await import('./inventory-service')).default;
+        await InventoryService.restoreStockForOrder(orderId);
+      } catch (error) {
+        console.error('Error restoring inventory:', error);
+        // Don't fail the cancellation if inventory restoration fails
+      }
+    }
+
     return order.toObject();
   }
 

@@ -5,7 +5,7 @@ import { Gift, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { IReward } from '@/interfaces';
@@ -14,8 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 
 interface RewardSelectorProps {
   subtotal: number;
-  onRewardSelect: (reward: IReward | null, discountAmount: number) => void;
-  selectedRewardId?: string;
+  onRewardSelect: (rewards: IReward[], totalDiscountAmount: number) => void;
+  selectedRewardIds?: string[];
 }
 
 /**
@@ -25,26 +25,26 @@ interface RewardSelectorProps {
 export function RewardSelector({
   subtotal,
   onRewardSelect,
-  selectedRewardId,
+  selectedRewardIds = [],
 }: RewardSelectorProps) {
   const { toast } = useToast();
   const [rewards, setRewards] = useState<IReward[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | undefined>(selectedRewardId);
-  const [discountAmount, setDiscountAmount] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<string[]>(selectedRewardIds);
+  const [totalDiscountAmount, setTotalDiscountAmount] = useState(0);
 
   useEffect(() => {
     loadRewards();
   }, []);
 
   useEffect(() => {
-    if (selectedId) {
-      calculateDiscount(selectedId);
+    if (selectedIds.length > 0) {
+      calculateTotalDiscount(selectedIds);
     } else {
-      setDiscountAmount(0);
-      onRewardSelect(null, 0);
+      setTotalDiscountAmount(0);
+      onRewardSelect([], 0);
     }
-  }, [selectedId, subtotal]);
+  }, [selectedIds, subtotal]);
 
   async function loadRewards() {
     try {
@@ -72,30 +72,40 @@ export function RewardSelector({
     }
   }
 
-  async function calculateDiscount(rewardId: string) {
+  async function calculateTotalDiscount(rewardIds: string[]) {
     try {
-      const result = await calculateDiscountAmountAction(rewardId, subtotal);
+      let totalDiscount = 0;
+      const selectedRewards: IReward[] = [];
 
-      if (result.success && result.data) {
-        const amount = result.data.discountAmount;
-        setDiscountAmount(amount);
+      for (const rewardId of rewardIds) {
+        const result = await calculateDiscountAmountAction(rewardId, subtotal);
 
-        const reward = rewards.find((r) => r._id.toString() === rewardId);
-        if (reward) {
-          onRewardSelect(reward, amount);
+        if (result.success && result.data) {
+          totalDiscount += result.data.discountAmount;
+          const reward = rewards.find((r) => r._id.toString() === rewardId);
+          if (reward) {
+            selectedRewards.push(reward);
+          }
         }
       }
+
+      setTotalDiscountAmount(totalDiscount);
+      onRewardSelect(selectedRewards, totalDiscount);
     } catch (error) {
       console.error('Error calculating discount:', error);
     }
   }
 
-  function handleRewardChange(rewardId: string) {
-    if (rewardId === selectedId) {
-      setSelectedId(undefined);
+  function handleRewardToggle(rewardId: string, checked: boolean) {
+    if (checked) {
+      setSelectedIds([...selectedIds, rewardId]);
     } else {
-      setSelectedId(rewardId);
+      setSelectedIds(selectedIds.filter((id) => id !== rewardId));
     }
+  }
+
+  function clearAllRewards() {
+    setSelectedIds([]);
   }
 
   function getRewardDescription(reward: IReward): string {
@@ -178,80 +188,80 @@ export function RewardSelector({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <RadioGroup value={selectedId} onValueChange={handleRewardChange}>
-          {rewards.map((reward) => {
-            const isSelected = selectedId === reward._id.toString();
-            const expiryWarning = new Date(reward.expiresAt).getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000;
+        {rewards.map((reward) => {
+          const rewardId = reward._id.toString();
+          const isSelected = selectedIds.includes(rewardId);
+          const expiryWarning = new Date(reward.expiresAt).getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000;
 
-            return (
-              <div
-                key={reward._id.toString()}
-                className={`relative rounded-lg border-2 p-4 transition-all ${
-                  isSelected
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <RadioGroupItem
-                    value={reward._id.toString()}
-                    id={reward._id.toString()}
-                    className="mt-1"
-                  />
-                  
-                  <div className="flex-1">
-                    <Label
-                      htmlFor={reward._id.toString()}
-                      className="cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold">
-                          {getRewardDescription(reward)}
-                        </p>
-                        {isSelected && (
-                          <Check className="h-5 w-5 text-primary" />
-                        )}
-                      </div>
-                      
-                      <div className="mt-1 flex items-center gap-2">
-                        <code className="text-xs text-muted-foreground">
-                          {reward.code}
-                        </code>
-                        <Badge
-                          variant={expiryWarning ? 'destructive' : 'secondary'}
-                          className="text-xs"
-                        >
-                          {formatExpiryDate(reward.expiresAt)}
-                        </Badge>
-                      </div>
-                    </Label>
-                  </div>
+          return (
+            <div
+              key={rewardId}
+              className={`relative rounded-lg border-2 p-4 transition-all ${
+                isSelected
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id={rewardId}
+                  checked={isSelected}
+                  onCheckedChange={(checked) => handleRewardToggle(rewardId, checked as boolean)}
+                  className="mt-1"
+                />
+                
+                <div className="flex-1">
+                  <Label
+                    htmlFor={rewardId}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold">
+                        {getRewardDescription(reward)}
+                      </p>
+                      {isSelected && (
+                        <Check className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                    
+                    <div className="mt-1 flex items-center gap-2">
+                      <code className="text-xs text-muted-foreground">
+                        {reward.code}
+                      </code>
+                      <Badge
+                        variant={expiryWarning ? 'destructive' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {formatExpiryDate(reward.expiresAt)}
+                      </Badge>
+                    </div>
+                  </Label>
                 </div>
               </div>
-            );
-          })}
-        </RadioGroup>
+            </div>
+          );
+        })}
 
-        {selectedId && discountAmount > 0 && (
+        {selectedIds.length > 0 && totalDiscountAmount > 0 && (
           <Alert className="border-primary bg-primary/5">
             <Gift className="h-4 w-4 text-primary" />
             <AlertDescription>
               <span className="font-semibold">
-                You'll save ₦{discountAmount.toLocaleString()}
+                You'll save ₦{totalDiscountAmount.toLocaleString()}
               </span>{' '}
-              with this reward!
+              with {selectedIds.length} reward{selectedIds.length > 1 ? 's' : ''}!
             </AlertDescription>
           </Alert>
         )}
 
-        {selectedId && (
+        {selectedIds.length > 0 && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedId(undefined)}
+            onClick={clearAllRewards}
             className="w-full"
           >
-            Remove Reward
+            Clear All Rewards
           </Button>
         )}
       </CardContent>
