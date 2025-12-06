@@ -34,7 +34,12 @@ const checkoutSchema = z.object({
   orderType: z.enum(['dine-in', 'pickup', 'delivery']),
   tableNumber: z.string().optional(),
   pickupTime: z.string().optional(),
-  deliveryAddress: z.string().optional(),
+  deliveryStreet: z.string().optional(),
+  deliveryStreet2: z.string().optional(),
+  deliveryCity: z.string().optional(),
+  deliveryState: z.string().optional(),
+  deliveryPostalCode: z.string().optional(),
+  deliveryCountry: z.string().optional(),
   deliveryLandmark: z.string().optional(),
   deliveryInstructions: z.string().optional(),
   specialInstructions: z.string().optional(),
@@ -62,6 +67,51 @@ const checkoutSchema = z.object({
 }, {
   message: 'Table number is required for dine-in orders',
   path: ['tableNumber'],
+}).refine((data) => {
+  // Pickup time is required for pickup orders
+  if (data.orderType === 'pickup' && !data.pickupTime) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Pickup time is required for pickup orders',
+  path: ['pickupTime'],
+}).refine((data) => {
+  // Delivery street is required for delivery orders
+  if (data.orderType === 'delivery' && !data.deliveryStreet) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Street address is required for delivery orders',
+  path: ['deliveryStreet'],
+}).refine((data) => {
+  // Delivery city is required for delivery orders
+  if (data.orderType === 'delivery' && !data.deliveryCity) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'City is required for delivery orders',
+  path: ['deliveryCity'],
+}).refine((data) => {
+  // Delivery state is required for delivery orders
+  if (data.orderType === 'delivery' && !data.deliveryState) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'State is required for delivery orders',
+  path: ['deliveryState'],
+}).refine((data) => {
+  // Delivery country is required for delivery orders
+  if (data.orderType === 'delivery' && !data.deliveryCountry) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Country is required for delivery orders',
+  path: ['deliveryCountry'],
 });
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
@@ -107,7 +157,12 @@ export function CheckoutForm() {
       orderType: 'dine-in',
       tableNumber: '',
       pickupTime: '',
-      deliveryAddress: '',
+      deliveryStreet: '',
+      deliveryStreet2: '',
+      deliveryCity: '',
+      deliveryState: '',
+      deliveryPostalCode: '',
+      deliveryCountry: '',
       deliveryLandmark: '',
       deliveryInstructions: '',
       specialInstructions: '',
@@ -341,7 +396,12 @@ export function CheckoutForm() {
           phone: data.customerPhone,
         },
         deliveryInfo: data.orderType === 'delivery' ? {
-          address: data.deliveryAddress || '',
+          street: data.deliveryStreet || '',
+          street2: data.deliveryStreet2,
+          city: data.deliveryCity || '',
+          state: data.deliveryState || '',
+          postalCode: data.deliveryPostalCode || '',
+          country: data.deliveryCountry || '',
           landmark: data.deliveryLandmark,
           instructions: data.deliveryInstructions,
         } : undefined,
@@ -477,7 +537,7 @@ export function CheckoutForm() {
       const currentOrderType = form.getValues('orderType');
       
       if (currentOrderType === 'delivery') {
-        fieldsToValidate.push('deliveryAddress');
+        fieldsToValidate.push('deliveryStreet', 'deliveryCity', 'deliveryState', 'deliveryCountry');
       } else if (currentOrderType === 'pickup') {
         fieldsToValidate.push('pickupTime');
       } else if (currentOrderType === 'dine-in') {
@@ -624,8 +684,8 @@ export function CheckoutForm() {
                       tableNumber={tableNumber || ''}
                     />
                   )}
-                  {currentStep === 4 && <TipInputStep form={form} subtotal={getTotalPrice()} />}
-                  {currentStep === 5 && useTab === 'pay-now' && <PaymentMethodStep form={form} />}
+                  {currentStep === 4 && orderType === 'dine-in' && <TipInputStep form={form} subtotal={getTotalPrice()} />}
+                  {currentStep === 5 && orderType === 'dine-in' && useTab === 'pay-now' && <PaymentMethodStep form={form} />}
                   {currentStep === 3 && orderType !== 'dine-in' && <TipInputStep form={form} subtotal={getTotalPrice()} />}
                   {currentStep === 4 && orderType !== 'dine-in' && <PaymentMethodStep form={form} />}
 

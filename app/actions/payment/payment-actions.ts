@@ -24,12 +24,14 @@ export interface CreateOrderInput {
     phone: string;
   };
   deliveryInfo?: {
-    address: string;
+    street: string;
+    street2?: string;
+    city: string;
+    state: string;
+    postalCode?: string;
+    country: string;
     landmark?: string;
     instructions?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
   };
   pickupTime?: string;
   tableNumber?: string;
@@ -139,11 +141,12 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     if (input.orderType === 'delivery' && input.deliveryInfo) {
       orderData.deliveryDetails = {
         address: {
-          street: input.deliveryInfo.address,
-          city: 'Lagos', // Default, could be extracted from address
-          state: 'Lagos',
-          postalCode: '100001',
-          country: 'Nigeria',
+          street: input.deliveryInfo.street,
+          street2: input.deliveryInfo.street2,
+          city: input.deliveryInfo.city,
+          state: input.deliveryInfo.state,
+          postalCode: input.deliveryInfo.postalCode,
+          country: input.deliveryInfo.country,
         },
         deliveryInstructions: input.deliveryInfo.instructions,
       };
@@ -187,10 +190,10 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           email: input.customerInfo.email,
           phone: input.customerInfo.phone,
           address: input.deliveryInfo ? {
-            streetAddress: input.deliveryInfo.address,
-            city: input.deliveryInfo.city || 'Lagos',
-            state: input.deliveryInfo.state || 'Lagos',
-            postalCode: input.deliveryInfo.postalCode || '100001',
+            streetAddress: input.deliveryInfo.street,
+            city: input.deliveryInfo.city,
+            state: input.deliveryInfo.state,
+            postalCode: input.deliveryInfo.postalCode,
             deliveryInstructions: input.deliveryInfo.instructions,
           } : undefined,
           savePhone: input.savePhone,

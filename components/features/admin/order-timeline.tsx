@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, CheckCircle, Loader2, Package, XCircle } from 'lucide-react';
+import { Clock, CheckCircle, Loader2, Package, XCircle, MessageSquare } from 'lucide-react';
 
 interface OrderTimelineProps {
   order: any;
@@ -69,16 +69,19 @@ export function OrderTimeline({ order }: OrderTimelineProps) {
                 {/* Content */}
                 <div className={`flex-1 ${!isLast ? 'pb-6' : ''}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="flex-1">
                       <p className={`font-medium capitalize ${
                         isCurrent ? 'text-foreground' : 'text-muted-foreground'
                       }`}>
                         {entry.status}
                       </p>
                       {entry.note && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {entry.note}
-                        </p>
+                        <div className="mt-2 flex items-start gap-2 bg-muted/50 p-3 rounded-md border border-border">
+                          <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-foreground whitespace-pre-line">
+                            {entry.note}
+                          </div>
+                        </div>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground whitespace-nowrap">

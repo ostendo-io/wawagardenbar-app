@@ -37,8 +37,19 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
     notFound();
   }
 
-  // Serialize order for client components
-  const order = JSON.parse(JSON.stringify(orderData));
+  // Serialize order for client components with proper customer data
+  const populatedUser = orderData.userId as any;
+  const serializedOrder = JSON.parse(JSON.stringify(orderData));
+  
+  // Add customer object with user profile data or guest data
+  const order = {
+    ...serializedOrder,
+    customer: {
+      name: orderData.guestName || populatedUser?.name || 'Guest',
+      email: orderData.guestEmail || populatedUser?.email,
+      phone: orderData.guestPhone || populatedUser?.phone,
+    },
+  };
 
   return (
     <div className="space-y-6">

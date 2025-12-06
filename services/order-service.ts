@@ -124,7 +124,9 @@ export class OrderService {
       return null;
     }
 
-    const order = await Order.findById(orderId).lean();
+    const order = await Order.findById(orderId)
+      .populate('userId', 'name email phone')
+      .lean();
     return order;
   }
 
@@ -160,12 +162,6 @@ export class OrderService {
       query.status = options.status;
     }
 
-    console.log('OrderService.getOrdersByUserId query:', {
-      userId,
-      query,
-      options,
-    });
-
     const [orders, total] = await Promise.all([
       Order.find(query)
         .sort({ createdAt: -1 })
@@ -174,12 +170,6 @@ export class OrderService {
         .lean(),
       Order.countDocuments(query),
     ]);
-
-    console.log('OrderService.getOrdersByUserId result:', {
-      ordersFound: orders.length,
-      total,
-      firstOrderUserId: orders[0]?.userId?.toString(),
-    });
 
     return { orders, total };
   }

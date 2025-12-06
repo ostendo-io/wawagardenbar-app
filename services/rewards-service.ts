@@ -600,4 +600,69 @@ export class RewardsService {
 
     return stats;
   }
+
+  /**
+   * Admin: Manually issue a reward to a specific user
+   * This bypasses the automatic reward calculation and directly creates a reward
+   */
+  static async issueManualReward(
+    userId: string,
+    rewardType: 'discount-percentage' | 'discount-fixed' | 'loyalty-points',
+    rewardValue: number,
+    validityDays: number,
+    description: string
+  ): Promise<IReward> {
+    await connectDB();
+
+    // Generate unique code
+    const code = this.generateRewardCode();
+    
+    // Calculate expiry date
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + validityDays);
+
+    // Create a temporary order ID for manual rewards (using a special marker)
+    const manualOrderId = new Types.ObjectId();
+    
+    // Create a temporary rule ID for manual rewards
+    const manualRuleId = new Types.ObjectId();
+
+    // Create the reward
+    const reward = await Reward.create({
+      userId: new Types.ObjectId(userId),
+      ruleId: manualRuleId, // Temporary ID for manual rewards
+      orderId: manualOrderId, // Temporary ID for manual rewards
+      rewardType,
+      rewardValue,
+      status: 'active',
+      code,
+      expiresAt,
+    });
+
+    // Update user rewards count
+    const user = await User.findById(userId);
+    if (user) {
+      if (!user.rewardsEarned) {
+        user.rewardsEarned = 0;
+      }
+      user.rewardsEarned += 1;
+
+      // Add loyalty points if applicable
+      if (rewardType === 'loyalty-points') {
+        const PointsService = (await import('./points-service')).PointsService;
+        
+        await PointsService.awardPoints(
+          userId,
+          rewardValue,
+          undefined,
+          reward._id,
+          description || `Manually awarded ${rewardValue} points`
+        );
+      }
+
+      await user.save();
+    }
+
+    return reward.toObject();
+  }
 }

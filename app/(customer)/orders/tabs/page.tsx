@@ -14,13 +14,6 @@ async function getCustomerTabs() {
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
-  console.log('CustomerTabsPage Session Debug:', {
-    isLoggedIn: session.isLoggedIn,
-    userId: session.userId,
-    isGuest: session.isGuest,
-    email: session.email
-  });
-
   if (!session.isLoggedIn) {
     console.log('Redirecting to login: Not logged in');
     redirect('/auth/login');

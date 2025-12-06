@@ -13,7 +13,7 @@ export interface UpdateProfileFromCheckoutData {
     streetAddress: string;
     city: string;
     state: string;
-    postalCode: string;
+    postalCode?: string;
     deliveryInstructions?: string;
   };
   savePhone?: boolean;
@@ -65,7 +65,7 @@ export class UserService {
         streetAddress: data.address.streetAddress,
         city: data.address.city,
         state: data.address.state,
-        postalCode: data.address.postalCode,
+        postalCode: data.address.postalCode || '',
         country: 'Nigeria',
         deliveryInstructions: data.address.deliveryInstructions,
         isDefault: isFirstAddress,
@@ -126,5 +126,46 @@ export class UserService {
     ).select('-verificationPin -pinExpiresAt -sessionToken');
 
     return user;
+  }
+
+  /**
+   * Search users by email or phone
+   * Returns registered users only (excludes guests)
+   */
+  static async searchUsers(query: string): Promise<IUser[]> {
+    await connectDB();
+
+    if (!query || query.trim().length < 3) {
+      return [];
+    }
+
+    const searchQuery = query.trim();
+
+    // Search by email or phone
+    const users = await UserModel.find({
+      role: { $in: ['customer', 'admin', 'super-admin'] }, // Exclude guests
+      $or: [
+        { email: { $regex: searchQuery, $options: 'i' } },
+        { phone: { $regex: searchQuery, $options: 'i' } },
+      ],
+    })
+      .select('_id firstName lastName email phone role')
+      .limit(10)
+      .lean();
+
+    return users as IUser[];
+  }
+
+  /**
+   * Get user by ID (for admin purposes)
+   */
+  static async getUserById(userId: string): Promise<IUser | null> {
+    await connectDB();
+
+    const user = await UserModel.findById(userId).select(
+      '-verificationPin -pinExpiresAt -sessionToken'
+    ).lean();
+
+    return user as IUser | null;
   }
 }

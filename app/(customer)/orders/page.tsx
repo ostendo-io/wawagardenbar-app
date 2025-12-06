@@ -317,7 +317,7 @@ function OrderCard({ order }: { order: any }) {
               <span>• Table {order.dineInDetails.tableNumber}</span>
             )}
             {order.orderType === 'delivery' && order.deliveryDetails?.address && (
-              <span>• {order.deliveryDetails.address}</span>
+              <span>• {order.deliveryDetails.address.street}, {order.deliveryDetails.address.city}</span>
             )}
           </div>
 

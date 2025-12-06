@@ -129,17 +129,12 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
   async function handleEmailSubmit(data: EmailFormData) {
     setIsLoading(true);
     try {
-      console.log('Sending email PIN:', { email: data.email, phone });
-      
       const result = await sendEmailPinAction(data.email, phone);
-      
-      console.log('Email PIN send result:', result);
       
       if (result.success) {
         setEmail(data.email);
         setAuthMethod('email');
         setStep('pin');
-        console.log('Email state set to:', data.email);
         toast({
           title: 'PIN Sent',
           description: result.message,
@@ -170,13 +165,9 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
   async function handlePinSubmit(data: PinFormData) {
     setIsLoading(true);
     try {
-      console.log('Verifying PIN:', { authMethod, phone, email, pin: data.pin });
-      
       const result = authMethod === 'sms' 
         ? await verifyPinAction(phone, data.pin)
         : await verifyEmailPinAction(email, data.pin);
-      
-      console.log('PIN verification result:', result);
       
       if (result.success) {
         toast({

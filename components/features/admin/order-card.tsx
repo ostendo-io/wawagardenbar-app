@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,10 @@ import {
   MoreVertical,
   CheckCircle,
   Loader2,
+  Receipt,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface OrderCardProps {
   order: any;
@@ -38,8 +40,32 @@ interface OrderCardProps {
  */
 export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [pickupInfo, setPickupInfo] = useState<{ pickupLabel: string; countdownLabel: string; isOverdue: boolean } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    if (order.orderType !== 'pickup' || !order.pickupTime) {
+      setPickupInfo(null);
+      return;
+    }
+    function updatePickupTiming() {
+      const pickupDate = new Date(order.pickupTime);
+      const diffMinutes = differenceInMinutes(pickupDate, new Date());
+      const isOverdue = diffMinutes < 0;
+      const absoluteMinutes = Math.abs(diffMinutes);
+      const countdownLabel =
+        absoluteMinutes < 1 ? 'due now' : isOverdue ? `${absoluteMinutes} min overdue` : `${absoluteMinutes} min left`;
+      setPickupInfo({
+        pickupLabel: format(pickupDate, 'h:mm a'),
+        countdownLabel,
+        isOverdue,
+      });
+    }
+    updatePickupTiming();
+    const interval = setInterval(updatePickupTiming, 60000);
+    return () => clearInterval(interval);
+  }, [order.orderType, order.pickupTime]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -149,14 +175,40 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${getStatusColor(order.status)}`} />
             <div>
-              <h3 className="font-semibold text-lg">{order.orderNumber}</h3>
+              <Link 
+                href={`/dashboard/orders/${order._id}`}
+                className="font-semibold text-lg hover:text-primary hover:underline transition-colors"
+              >
+                {order.orderNumber}
+              </Link>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{getTypeIcon(order.orderType)}</span>
                 <span className="capitalize">{order.orderType}</span>
+                {pickupInfo && (
+                  <>
+                    <span>•</span>
+                    <span>{pickupInfo.pickupLabel}</span>
+                    <span className={`text-xs font-semibold ${pickupInfo.isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {pickupInfo.countdownLabel}
+                    </span>
+                  </>
+                )}
                 {order.tableNumber && (
                   <>
                     <span>•</span>
                     <span>Table {order.tableNumber}</span>
+                  </>
+                )}
+                {order.tabId && (
+                  <>
+                    <span>•</span>
+                    <Link 
+                      href={`/dashboard/orders/tabs/${order.tabId}`}
+                      className="flex items-center gap-1 text-primary hover:underline font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Receipt className="h-3 w-3" />
+                      <span>On Tab</span>
+                    </Link>
                   </>
                 )}
               </div>

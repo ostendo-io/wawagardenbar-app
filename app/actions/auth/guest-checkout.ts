@@ -47,13 +47,6 @@ export async function guestCheckoutAction(
     session.createdAt = Date.now();
 
     await session.save();
-    
-    console.log('Guest session created:', {
-      email: session.email,
-      guestId: session.guestId,
-      isGuest: session.isGuest,
-      isLoggedIn: session.isLoggedIn
-    });
 
     return {
       success: true,

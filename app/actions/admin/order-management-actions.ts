@@ -8,7 +8,7 @@ import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { AuditLogService } from '@/services/audit-log-service';
-import { TabService } from '@/services';
+import { TabService, OrderService } from '@/services';
 import InventoryService from '@/services/inventory-service';
 import { completeOrderAndDeductStockAction } from '@/app/actions/order/complete-order-action';
 import { emitBatchUpdateEvent, emitOrderUpdatedEvent, emitOrderCancelledEvent } from '@/lib/socket-emit-helper';
@@ -103,6 +103,7 @@ export async function getOrdersAction(
       orderNumber: order.orderNumber,
       orderType: order.orderType,
       status: order.status,
+      tabId: order.tabId?.toString(),
       customer: {
         name: order.guestName || order.userId?.name || 'Guest',
         email: order.guestEmail || order.userId?.email,
@@ -119,6 +120,7 @@ export async function getOrdersAction(
       total: order.total,
       paymentStatus: order.paymentStatus,
       tableNumber: order.dineInDetails?.tableNumber,
+      pickupTime: order.pickupDetails?.preferredPickupTime?.toISOString(),
       deliveryAddress: order.deliveryDetails?.address,
       specialInstructions: order.specialInstructions,
       createdAt: order.createdAt.toISOString(),
@@ -162,24 +164,24 @@ export async function getOrderDetailsAction(orderId: string): Promise<ActionResu
       return { success: false, error: 'Unauthorized' };
     }
 
-    await connectDB();
-
-    const order = await OrderModel.findById(orderId).lean();
+    const order = await OrderService.getOrderById(orderId);
 
     if (!order) {
       return { success: false, error: 'Order not found' };
     }
 
     // Serialize for client
+    const populatedUser = order.userId as any;
     const serialized = {
       _id: order._id.toString(),
       orderNumber: order.orderNumber,
       orderType: order.orderType,
       status: order.status,
+      userId: populatedUser?._id?.toString(),
       customer: {
-        name: order.guestName || 'Guest',
-        email: order.guestEmail,
-        phone: order.guestPhone,
+        name: order.guestName || populatedUser?.name || 'Guest',
+        email: order.guestEmail || populatedUser?.email,
+        phone: order.guestPhone || populatedUser?.phone,
       },
       items: order.items.map((item: any) => ({
         menuItemId: item.menuItemId?.toString(),
@@ -197,6 +199,7 @@ export async function getOrderDetailsAction(orderId: string): Promise<ActionResu
       paymentReference: order.paymentReference,
       tableNumber: order.dineInDetails?.tableNumber,
       deliveryAddress: order.deliveryDetails?.address,
+      deliveryDetails: order.deliveryDetails,
       pickupTime: order.pickupDetails?.preferredPickupTime?.toISOString(),
       specialInstructions: order.specialInstructions,
       createdAt: order.createdAt.toISOString(),
@@ -551,7 +554,7 @@ export async function addOrderNoteAction(
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
-    if (!session.userId || session.role !== 'admin') {
+    if (!session.userId || !session.role || !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -563,12 +566,33 @@ export async function addOrderNoteAction(
       return { success: false, error: 'Order not found' };
     }
 
-    // Add note to status history
-    order.statusHistory.push({
-      status: order.status,
-      timestamp: new Date(),
-      note: `Note by ${session.email || session.role}: ${note}`,
-    });
+    // Find the most recent status history entry and add note to it
+    // If there's no status history, create one
+    if (order.statusHistory.length === 0) {
+      order.statusHistory.push({
+        status: order.status,
+        timestamp: new Date(),
+        note: `Note by ${session.email || session.role}: ${note}`,
+      });
+    } else {
+      // Get the last status history entry
+      const lastEntry = order.statusHistory[order.statusHistory.length - 1];
+      
+      // If the last entry is for the current status, append the note
+      if (lastEntry.status === order.status) {
+        const existingNote = lastEntry.note || '';
+        const separator = existingNote ? '\n' : '';
+        lastEntry.note = `${existingNote}${separator}Note by ${session.email || session.role}: ${note}`;
+        lastEntry.timestamp = new Date(); // Update timestamp
+      } else {
+        // If status has changed, create a new entry
+        order.statusHistory.push({
+          status: order.status,
+          timestamp: new Date(),
+          note: `Note by ${session.email || session.role}: ${note}`,
+        });
+      }
+    }
 
     await order.save();
 

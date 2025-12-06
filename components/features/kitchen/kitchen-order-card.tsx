@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderStatusAction } from '@/app/actions/admin/order-management-actions';
 import { Clock, User, Loader2, AlertCircle } from 'lucide-react';
-import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
+import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 interface KitchenOrderCardProps {
@@ -21,6 +21,7 @@ interface KitchenOrderCardProps {
 export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [orderAge, setOrderAge] = useState(0);
+  const [pickupInfo, setPickupInfo] = useState<{ pickupLabel: string; countdownLabel: string; isOverdue: boolean } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -36,6 +37,29 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
 
     return () => clearInterval(interval);
   }, [order.createdAt]);
+
+  useEffect(() => {
+    if (order.orderType !== 'pickup' || !order.pickupTime) {
+      setPickupInfo(null);
+      return;
+    }
+    function updatePickupTiming() {
+      const pickupDate = new Date(order.pickupTime);
+      const diffMinutes = differenceInMinutes(pickupDate, new Date());
+      const isOverdue = diffMinutes < 0;
+      const absoluteMinutes = Math.abs(diffMinutes);
+      const countdownLabel =
+        absoluteMinutes < 1 ? 'due now' : isOverdue ? `${absoluteMinutes} min overdue` : `${absoluteMinutes} min left`;
+      setPickupInfo({
+        pickupLabel: format(pickupDate, 'h:mm a'),
+        countdownLabel,
+        isOverdue,
+      });
+    }
+    updatePickupTiming();
+    const interval = setInterval(updatePickupTiming, 60000);
+    return () => clearInterval(interval);
+  }, [order.orderType, order.pickupTime]);
 
   // Get color based on order age
   function getAgeColor() {
@@ -98,6 +122,14 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
                 {order.orderType === 'pickup' && '🛍️ Pickup'}
                 {order.orderType === 'delivery' && '🚚 Delivery'}
               </span>
+              {pickupInfo && (
+                <div className="flex items-center gap-2 text-lg">
+                  <span>{pickupInfo.pickupLabel}</span>
+                  <span className={`font-semibold ${pickupInfo.isOverdue ? 'text-red-300' : 'text-emerald-300'}`}>
+                    {pickupInfo.countdownLabel}
+                  </span>
+                </div>
+              )}
               {order.tableNumber && (
                 <span className="text-xl font-semibold">Table {order.tableNumber}</span>
               )}

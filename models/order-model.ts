@@ -36,9 +36,10 @@ const deliveryDetailsSchema = new Schema<IDeliveryDetails>(
   {
     address: {
       street: { type: String, required: true },
+      street2: { type: String, required: false },
       city: { type: String, required: true },
       state: { type: String, required: true },
-      postalCode: { type: String, required: true },
+      postalCode: { type: String, required: false },
       country: { type: String, required: true },
     },
     deliveryInstructions: { type: String },

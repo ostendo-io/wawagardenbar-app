@@ -157,11 +157,11 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
           name="pickupTime"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Preferred Pickup Time</FormLabel>
+              <FormLabel>Preferred Pickup Time <span className="text-red-500">*</span></FormLabel>
               <FormControl>
                 <div className="relative">
                   <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="datetime-local" className="pl-10" {...field} />
+                  <Input type="datetime-local" className="pl-10" {...field} required />
                 </div>
               </FormControl>
               <FormDescription>
@@ -178,27 +178,108 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
         <>
           <FormField
             control={form.control}
-            name="deliveryAddress"
+            name="deliveryStreet"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Delivery Address</FormLabel>
+                <FormLabel>Street Address <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Textarea
-                      placeholder="Enter your full delivery address"
-                      className="pl-10 min-h-[80px]"
+                    <Input
+                      placeholder="e.g., 123 Main Street"
+                      className="pl-10"
                       {...field}
+                      required
                     />
                   </div>
                 </FormControl>
                 <FormDescription>
-                  Include street name, house number, and area
+                  House number and street name
                 </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="deliveryStreet2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Street Address 2 (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g., Apt 4B, Suite 200, Floor 3"
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Apartment, suite, unit, building, floor, etc.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="deliveryCity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City <span className="text-red-500">*</span></FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Lagos" {...field} required />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="deliveryState"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State <span className="text-red-500">*</span></FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Lagos" {...field} required />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="deliveryPostalCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Postal Code (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 100001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="deliveryCountry"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country <span className="text-red-500">*</span></FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Nigeria" {...field} required />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}

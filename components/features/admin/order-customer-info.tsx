@@ -38,56 +38,73 @@ export function OrderCustomerInfo({ order }: OrderCustomerInfoProps) {
         {/* Customer Name */}
         <div className="flex items-start gap-3">
           <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-medium">Name</p>
             <p className="text-sm text-muted-foreground">{customer.name || 'N/A'}</p>
           </div>
         </div>
 
         {/* Email */}
-        {customer.email && (
-          <div className="flex items-start gap-3">
-            <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">Email</p>
+        <div className="flex items-start gap-3">
+          <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Email</p>
+            {customer.email ? (
               <a 
                 href={`mailto:${customer.email}`}
                 className="text-sm text-primary hover:underline"
               >
                 {customer.email}
               </a>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">N/A</p>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Phone */}
-        {customer.phone && (
-          <div className="flex items-start gap-3">
-            <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">Phone</p>
+        <div className="flex items-start gap-3">
+          <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Phone</p>
+            {customer.phone ? (
               <a 
                 href={`tel:${customer.phone}`}
                 className="text-sm text-primary hover:underline"
               >
                 {customer.phone}
               </a>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">N/A</p>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Delivery Address */}
-        {order.orderType === 'delivery' && order.deliveryAddress && (
+        {order.orderType === 'delivery' && order.deliveryDetails?.address && (
           <div className="flex items-start gap-3">
             <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
               <p className="text-sm font-medium">Delivery Address</p>
               <p className="text-sm text-muted-foreground">
-                {order.deliveryAddress.street}
-                {order.deliveryAddress.apartment && `, ${order.deliveryAddress.apartment}`}
+                {order.deliveryDetails.address.street}
+                {order.deliveryDetails.address.street2 && (
+                  <>
+                    <br />
+                    {order.deliveryDetails.address.street2}
+                  </>
+                )}
                 <br />
-                {order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.zipCode}
+                {order.deliveryDetails.address.city}, {order.deliveryDetails.address.state}
+                {order.deliveryDetails.address.postalCode && ` ${order.deliveryDetails.address.postalCode}`}
+                <br />
+                {order.deliveryDetails.address.country}
               </p>
+              {order.deliveryDetails.deliveryInstructions && (
+                <p className="text-sm text-muted-foreground mt-2 italic">
+                  Instructions: {order.deliveryDetails.deliveryInstructions}
+                </p>
+              )}
             </div>
           </div>
         )}

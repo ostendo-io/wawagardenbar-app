@@ -29,9 +29,10 @@ export interface IOrderItem {
 export interface IDeliveryDetails {
   address: {
     street: string;
+    street2?: string;
     city: string;
     state: string;
-    postalCode: string;
+    postalCode?: string;
     country: string;
   };
   deliveryInstructions?: string;

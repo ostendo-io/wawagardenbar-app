@@ -37,13 +37,6 @@ async function getTabDetails(tabId: string) {
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
-  console.log('TabDetailsPage Session Debug:', {
-    isLoggedIn: session.isLoggedIn,
-    userId: session.userId,
-    isGuest: session.isGuest,
-    email: session.email
-  });
-
   if (!session.isLoggedIn) {
     redirect('/auth/login');
   }

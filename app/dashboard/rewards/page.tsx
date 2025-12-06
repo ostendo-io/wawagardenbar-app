@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Plus, BarChart3 } from 'lucide-react';
+import { Plus, BarChart3, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -112,6 +112,12 @@ export default async function RewardsDashboardPage() {
               View Issued Rewards
             </Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link href="/dashboard/rewards/issue">
+              <Gift className="mr-2 h-4 w-4" />
+              Issue Reward
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/dashboard/rewards/rules/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -127,7 +133,7 @@ export default async function RewardsDashboardPage() {
       </Suspense>
 
       {/* Quick Links */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
           <Link href="/dashboard/rewards/rules">
             <CardHeader>
@@ -136,6 +142,19 @@ export default async function RewardsDashboardPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Create, edit, and manage reward rules
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+          <Link href="/dashboard/rewards/issue">
+            <CardHeader>
+              <CardTitle className="text-lg">Issue Reward</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Manually issue rewards to customers
               </p>
             </CardContent>
           </Link>

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserRole } from '@/interfaces/user.interface';
 import { RoleBadge } from './role-badge';
+import { logoutAction } from '@/app/actions/auth/logout';
 
 interface NavItem {
   title: string;
@@ -65,12 +66,13 @@ const navItems: NavItem[] = [
     icon: Gift,
     roles: ['super-admin'],
   },
-  {
-    title: 'Analytics',
-    href: '/dashboard/analytics',
-    icon: BarChart3,
-    roles: ['super-admin'],
-  },
+  // TODO: Create analytics page at /dashboard/analytics
+  // {
+  //   title: 'Analytics',
+  //   href: '/dashboard/analytics',
+  //   icon: BarChart3,
+  //   roles: ['super-admin'],
+  // },
   {
     title: 'Audit Logs',
     href: '/dashboard/audit-logs',
@@ -160,12 +162,12 @@ export function DashboardNav({ userEmail, userRole }: DashboardNavProps) {
             </div>
           )}
         </div>
-        <Button variant="outline" className="w-full justify-start" asChild>
-          <Link href="/api/auth/logout">
+        <form action={logoutAction}>
+          <Button variant="outline" className="w-full justify-start" type="submit">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
-          </Link>
-        </Button>
+          </Button>
+        </form>
       </div>
     </div>
   );

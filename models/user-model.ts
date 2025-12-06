@@ -7,7 +7,7 @@ const addressSchema = new Schema<IAddress>(
     streetAddress: { type: String, required: true, trim: true },
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
-    postalCode: { type: String, required: true, trim: true },
+    postalCode: { type: String, required: false, trim: true },
     country: { type: String, required: true, default: 'Nigeria', trim: true },
     deliveryInstructions: { type: String, trim: true },
     isDefault: { type: Boolean, default: false },

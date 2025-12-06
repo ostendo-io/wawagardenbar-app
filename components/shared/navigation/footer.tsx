@@ -3,16 +3,24 @@ import Image from 'next/image';
 import { Facebook, Instagram, Twitter } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-const footerLinks = {
+type FooterLink = { label: string; href: string };
+
+const footerLinks: {
+  company: FooterLink[];
+  support: FooterLink[];
+  quick: FooterLink[];
+} = {
   company: [
-    { label: 'About Us', href: '/about' },
-    { label: 'Contact', href: '/contact' },
-    { label: 'Careers', href: '/careers' },
+    // TODO: Create these pages
+    // { label: 'About Us', href: '/about' },
+    // { label: 'Contact', href: '/contact' },
+    // { label: 'Careers', href: '/careers' },
   ],
   support: [
-    { label: 'Help Center', href: '/help' },
-    { label: 'Terms of Service', href: '/terms' },
-    { label: 'Privacy Policy', href: '/privacy' },
+    // TODO: Create these pages
+    // { label: 'Help Center', href: '/help' },
+    // { label: 'Terms of Service', href: '/terms' },
+    // { label: 'Privacy Policy', href: '/privacy' },
   ],
   quick: [
     { label: 'Menu', href: '/menu' },
@@ -64,38 +72,42 @@ export function Footer() {
           </div>
 
           {/* Company */}
-          <div>
-            <h3 className="mb-4 text-sm font-semibold">Company</h3>
-            <ul className="space-y-2">
-              {footerLinks.company.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {footerLinks.company.length > 0 && (
+            <div>
+              <h3 className="mb-4 text-sm font-semibold">Company</h3>
+              <ul className="space-y-2">
+                {footerLinks.company.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Support */}
-          <div>
-            <h3 className="mb-4 text-sm font-semibold">Support</h3>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {footerLinks.support.length > 0 && (
+            <div>
+              <h3 className="mb-4 text-sm font-semibold">Support</h3>
+              <ul className="space-y-2">
+                {footerLinks.support.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Quick Links */}
           <div>
