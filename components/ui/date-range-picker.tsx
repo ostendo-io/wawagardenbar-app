@@ -96,3 +96,6 @@ export function DateRangePicker({
     </Popover>
   );
 }
+
+// Alias for compatibility
+export { DateRangePicker as DatePickerWithRange };

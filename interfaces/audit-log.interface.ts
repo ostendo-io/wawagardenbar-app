@@ -24,7 +24,10 @@ export type AuditAction =
   | 'admin.login'
   | 'admin.logout'
   | 'admin.login-failed'
-  | 'admin.account-locked';
+  | 'admin.account-locked'
+  | 'expense.create'
+  | 'expense.update'
+  | 'expense.delete';
 
 export interface IAuditLog {
   _id: Types.ObjectId;

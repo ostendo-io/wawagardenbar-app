@@ -14,9 +14,9 @@ if [ ! -f "docker-compose.prod.yml" ]; then
     exit 1
 fi
 
-# Pull latest image
+# Pull latest image using docker-compose
 echo "📦 Pulling latest image from GitHub Container Registry..."
-docker pull ghcr.io/ostendo-io/wawagardenbar-app:main
+docker-compose -f docker-compose.prod.yml pull app
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to pull image!"
@@ -29,14 +29,13 @@ echo ""
 
 # Stop and remove old container
 echo "🛑 Stopping old container..."
-docker stop food_app 2>/dev/null || echo "   Container not running"
-docker rm food_app 2>/dev/null || echo "   Container already removed"
+docker-compose -f docker-compose.prod.yml down
 
 echo ""
 
 # Start new container
 echo "🔄 Starting new container..."
-docker-compose -f docker-compose.prod.yml up -d food_app
+docker-compose -f docker-compose.prod.yml up -d app
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to start container!"
@@ -51,14 +50,14 @@ echo "⏳ Waiting for application to initialize (30 seconds)..."
 sleep 30
 
 # Check if container is running
-if docker ps | grep -q food_app; then
+if docker ps | grep -q wawa-garden-bar; then
     echo "✅ Deployment successful!"
     echo ""
     echo "📊 Container status:"
-    docker ps | grep food_app
+    docker ps | grep wawa-garden-bar
     echo ""
     echo "📋 Recent logs:"
-    docker logs --tail=20 food_app
+    docker logs --tail=20 wawa-garden-bar
     echo ""
     echo "🌐 Application is running on port 3002 (localhost only)"
     echo "   Access via reverse proxy or: curl http://127.0.0.1:3002/api/health"
@@ -66,6 +65,6 @@ else
     echo "❌ Container is not running!"
     echo ""
     echo "📋 Full logs:"
-    docker logs food_app
+    docker logs wawa-garden-bar
     exit 1
 fi

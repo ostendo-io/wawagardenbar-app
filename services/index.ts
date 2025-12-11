@@ -11,3 +11,5 @@ export { SystemSettingsService } from './system-settings-service';
 export { PointsService } from './points-service';
 export { TabService } from './tab-service';
 export { UserService } from './user-service';
+export { ExpenseService } from './expense-service';
+export { FinancialReportService } from './financial-report-service';

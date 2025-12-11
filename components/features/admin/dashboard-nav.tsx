@@ -12,6 +12,8 @@ import {
   LogOut,
   UtensilsCrossed,
   Gift,
+  DollarSign,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -64,6 +66,18 @@ const navItems: NavItem[] = [
     href: '/dashboard/rewards',
     icon: Gift,
     roles: ['super-admin'],
+  },
+  {
+    title: 'Expenses',
+    href: '/dashboard/finance/expenses',
+    icon: DollarSign,
+    roles: ['admin', 'super-admin'],
+  },
+  {
+    title: 'Reports',
+    href: '/dashboard/reports',
+    icon: BarChart3,
+    roles: ['admin', 'super-admin'],
   },
   // TODO: Create analytics page at /dashboard/analytics
   // {

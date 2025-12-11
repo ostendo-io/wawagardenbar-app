@@ -6,10 +6,10 @@ import { routePermissions } from '@/lib/permissions';
 import { UserRole } from '@/interfaces/user.interface';
 
 /**
- * Next.js middleware for route protection
+ * Next.js proxy for route protection
  * Checks user authentication and role-based permissions
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip middleware for public routes
