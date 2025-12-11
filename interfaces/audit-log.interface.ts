@@ -6,6 +6,9 @@ export type AuditAction =
   | 'user.delete'
   | 'user.delete_request'
   | 'user.role-change'
+  | 'user.password-reset'
+  | 'user.password-change'
+  | 'user.status-change'
   | 'menu.create'
   | 'menu.update'
   | 'menu.delete'
@@ -17,8 +20,11 @@ export type AuditAction =
   | 'reward.delete'
   | 'settings.update'
   | 'tab.manual_payment'
+  | 'admin.create'
   | 'admin.login'
-  | 'admin.logout';
+  | 'admin.logout'
+  | 'admin.login-failed'
+  | 'admin.account-locked';
 
 export interface IAuditLog {
   _id: Types.ObjectId;

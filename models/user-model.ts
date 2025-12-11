@@ -102,6 +102,41 @@ const userSchema = new Schema<IUser>(
     pinExpiresAt: { type: Date, select: false },
     sessionToken: { type: String, select: false },
     
+    // Admin Authentication
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,  // Allows null for non-admin users
+      lowercase: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 30,
+    },
+    password: {
+      type: String,
+      select: false,  // Never return in queries by default
+      minlength: 8,
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
+    passwordChangedAt: {
+      type: Date,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    accountLockedUntil: {
+      type: Date,
+    },
+    
     // Addresses & Payment
     addresses: { type: [addressSchema], default: [] },
     paymentMethods: { type: [paymentMethodSchema], default: [] },
@@ -143,7 +178,9 @@ userSchema.index({ sessionToken: 1 });
 userSchema.index({ createdAt: -1 });
 // email index is already created via unique: true in schema definition
 // phone index is already created via unique: true in schema definition
+// username index is already created via unique: true in schema definition
 userSchema.index({ 'addresses.isDefault': 1 });
+userSchema.index({ isAdmin: 1, accountStatus: 1 });
 
 // Instance Methods
 userSchema.methods.incrementOrderCount = function incrementOrderCount(): void {

@@ -15,6 +15,7 @@ interface SendPinResult {
   message: string;
   isNewUser?: boolean;
   errorCode?: string;
+  canRetryWithSMS?: boolean;
   canRetryWithEmail?: boolean;
 }
 

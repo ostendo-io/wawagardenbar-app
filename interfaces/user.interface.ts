@@ -71,6 +71,15 @@ export interface IUser {
   pinExpiresAt?: Date;
   sessionToken?: string;
   
+  // Admin Authentication Fields
+  username?: string;              // Unique username for admin login
+  password?: string;              // Hashed password (bcrypt)
+  isAdmin: boolean;               // Flag to identify admin users
+  mustChangePassword?: boolean;   // Force password change on next login
+  passwordChangedAt?: Date;       // Track password change history
+  failedLoginAttempts?: number;   // Track failed login attempts
+  accountLockedUntil?: Date;      // Account lockout timestamp
+  
   // Addresses & Payment
   addresses: IAddress[];
   paymentMethods: IPaymentMethod[];

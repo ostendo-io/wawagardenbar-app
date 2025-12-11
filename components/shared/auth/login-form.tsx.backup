@@ -84,33 +84,29 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
 
   async function handlePhoneSubmit(data: PhoneFormData) {
     setIsLoading(true);
-    setDeliveryError(null);
+    setSmsError(null);
     setCountdown(60);
     try {
-      let result;
-      
-      if (authMethod === 'whatsapp') {
-        result = await sendWhatsAppPinAction(data.phone);
-      } else {
-        result = await sendPinAction(data.phone);
-      }
+      const result = await sendPinAction(data.phone);
       
       if (result.success) {
+        // Sanitize and store phone to ensure consistency
         setPhone(sanitizePhone(data.phone));
+        setAuthMethod('sms');
         setStep('pin');
         toast({
           title: 'PIN Sent',
           description: result.message,
         });
       } else {
-        // Check if we can retry with other methods
-        if (result.canRetryWithSMS || result.canRetryWithEmail) {
+        // Check if we can retry with email
+        if (result.canRetryWithEmail) {
+          // Save phone number so it's available for email fallback
           setPhone(sanitizePhone(data.phone));
           
-          setDeliveryError({
+          setSmsError({
             message: result.message,
-            canRetryWithSMS: result.canRetryWithSMS,
-            canRetryWithEmail: result.canRetryWithEmail,
+            canRetryWithEmail: true,
           });
         } else {
           toast({
@@ -162,28 +158,17 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     }
   }
 
-  function handleTrySMS() {
-    setDeliveryError(null);
-    setAuthMethod('sms');
-  }
-
   function handleTryEmail() {
-    setDeliveryError(null);
+    setSmsError(null);
     setStep('email');
   }
 
   async function handlePinSubmit(data: PinFormData) {
     setIsLoading(true);
     try {
-      let result;
-      
-      if (authMethod === 'whatsapp') {
-        result = await verifyWhatsAppPinAction(phone, data.pin);
-      } else if (authMethod === 'sms') {
-        result = await verifyPinAction(phone, data.pin);
-      } else {
-        result = await verifyEmailPinAction(email, data.pin);
-      }
+      const result = authMethod === 'sms' 
+        ? await verifyPinAction(phone, data.pin)
+        : await verifyEmailPinAction(email, data.pin);
       
       if (result.success) {
         toast({
@@ -222,21 +207,16 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     setCountdown(60);
     setIsLoading(true);
     try {
-      let result;
-      
-      if (authMethod === 'whatsapp') {
-        result = await sendWhatsAppPinAction(phone);
-      } else if (authMethod === 'sms') {
-        result = await sendPinAction(phone);
-      } else {
-        result = await sendEmailPinAction(email, phone);
-      }
+      const result = authMethod === 'sms'
+        ? await sendPinAction(phone)
+        : await sendEmailPinAction(email, phone);
       
       if (result.success) {
-        const methodText = authMethod === 'whatsapp' ? 'WhatsApp' : authMethod === 'sms' ? 'phone' : 'email';
         toast({
           title: 'PIN Resent',
-          description: `A new PIN has been sent to your ${methodText}.`,
+          description: authMethod === 'sms' 
+            ? 'A new PIN has been sent to your phone.'
+            : 'A new PIN has been sent to your email.',
         });
         pinForm.reset();
       } else {
@@ -259,122 +239,24 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     }
   }
 
-  // Method selection step
-  if (step === 'method') {
-    return (
-      <div className="space-y-4">
-        <div className="text-center mb-6">
-          <h3 className="text-lg font-semibold mb-2">Choose delivery method</h3>
-          <p className="text-sm text-muted-foreground">
-            How would you like to receive your verification PIN?
-          </p>
-        </div>
-
-        <div className="grid gap-3">
-          <Card
-            className={`p-4 cursor-pointer transition-all hover:border-primary ${
-              authMethod === 'whatsapp' ? 'border-primary bg-primary/5' : ''
-            }`}
-            onClick={() => {
-              setAuthMethod('whatsapp');
-              setStep('phone');
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                <MessageCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold">WhatsApp</h4>
-                <p className="text-sm text-muted-foreground">
-                  Instant delivery via WhatsApp message
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card
-            className={`p-4 cursor-pointer transition-all hover:border-primary ${
-              authMethod === 'sms' ? 'border-primary bg-primary/5' : ''
-            }`}
-            onClick={() => {
-              setAuthMethod('sms');
-              setStep('phone');
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <Smartphone className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold">SMS</h4>
-                <p className="text-sm text-muted-foreground">
-                  Traditional text message to your phone
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card
-            className={`p-4 cursor-pointer transition-all hover:border-primary ${
-              authMethod === 'email' ? 'border-primary bg-primary/5' : ''
-            }`}
-            onClick={() => {
-              setAuthMethod('email');
-              setStep('email');
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                <Mail className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold">Email</h4>
-                <p className="text-sm text-muted-foreground">
-                  PIN sent to your email address
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   if (step === 'phone') {
     return (
       <form onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)} className="space-y-4">
-        {deliveryError && (deliveryError.canRetryWithSMS || deliveryError.canRetryWithEmail) && (
+        {smsError && smsError.canRetryWithEmail && (
           <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="ml-2">
-              <p className="mb-3 font-medium">{deliveryError.message}</p>
-              <div className="flex gap-2">
-                {deliveryError.canRetryWithSMS && authMethod === 'whatsapp' && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={handleTrySMS}
-                    className="flex-1"
-                  >
-                    <Smartphone className="mr-2 h-4 w-4" />
-                    Try SMS
-                  </Button>
-                )}
-                {deliveryError.canRetryWithEmail && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={handleTryEmail}
-                    className="flex-1"
-                  >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Try Email
-                  </Button>
-                )}
-              </div>
+              <p className="mb-3 font-medium">{smsError.message}</p>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={handleTryEmail}
+                className="w-full"
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Try with Email Instead
+              </Button>
             </AlertDescription>
           </Alert>
         )}
@@ -405,17 +287,8 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         </Button>
 
         <p className="text-center text-sm text-muted-foreground">
-          We'll send a 4-digit PIN via {authMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
+          We'll send a 4-digit PIN to your phone
         </p>
-
-        <button
-          type="button"
-          onClick={() => setStep('method')}
-          className="w-full text-sm text-muted-foreground hover:text-foreground"
-          disabled={isLoading}
-        >
-          ← Change delivery method
-        </button>
       </form>
     );
   }
@@ -459,13 +332,13 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         <button
           type="button"
           onClick={() => {
-            setStep('method');
-            setDeliveryError(null);
+            setStep('phone');
+            setSmsError(null);
           }}
           className="w-full text-sm text-muted-foreground hover:text-foreground"
           disabled={isLoading}
         >
-          ← Change delivery method
+          Back to phone number
         </button>
       </form>
     );
@@ -492,7 +365,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           </p>
         )}
         <p className="text-sm text-muted-foreground">
-          Enter the 4-digit PIN sent via {authMethod === 'whatsapp' ? 'WhatsApp' : authMethod === 'sms' ? 'SMS' : 'Email'} to {authMethod === 'email' ? email : phone}
+          Enter the 4-digit PIN sent to {authMethod === 'sms' ? phone : email}
         </p>
       </div>
 
@@ -505,13 +378,13 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         <button
           type="button"
           onClick={() => {
-            setStep(authMethod === 'email' ? 'email' : 'phone');
-            setDeliveryError(null);
+            setStep(authMethod === 'sms' ? 'phone' : 'email');
+            setSmsError(null);
           }}
           className="text-muted-foreground hover:text-foreground"
           disabled={isLoading}
         >
-          Change {authMethod === 'email' ? 'email' : 'phone number'}
+          Change {authMethod === 'sms' ? 'phone number' : 'email'}
         </button>
         <button
           type="button"
@@ -523,17 +396,17 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         </button>
       </div>
 
-      {(authMethod === 'sms' || authMethod === 'whatsapp') && (
+      {authMethod === 'sms' && (
         <div className="mt-6">
           <Alert className="bg-amber-50 border-amber-200 shadow-sm">
             <Mail className="h-5 w-5 text-amber-600" />
             <AlertDescription className="ml-3 text-base text-amber-900">
-              Having trouble receiving the {authMethod === 'whatsapp' ? 'WhatsApp message' : 'SMS'}? You can{' '}
+              Having trouble receiving the SMS? You can{' '}
               <button
                 type="button"
                 onClick={() => {
                   setStep('email');
-                  setDeliveryError(null);
+                  setSmsError(null);
                 }}
                 className="font-semibold text-amber-700 hover:text-amber-900 underline decoration-amber-700/30 underline-offset-4 hover:decoration-amber-900"
                 disabled={isLoading}

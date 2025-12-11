@@ -6,7 +6,7 @@ import { SettingsForm } from '@/components/features/admin/settings-form';
 import { PaymentSettingsForm } from '@/components/features/admin/payment-settings-form';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { UserX } from 'lucide-react';
+import { UserX, Users } from 'lucide-react';
 
 export const metadata = {
   title: 'Settings | Admin Dashboard',
@@ -60,6 +60,26 @@ export default async function SettingsPage() {
           Manage application settings and configuration
         </p>
       </div>
+
+      {/* Admin Management */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle>Admin Management</CardTitle>
+            <CardDescription>
+              Manage admin users and permissions
+            </CardDescription>
+          </div>
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/dashboard/settings/admins">
+              Manage Admins
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Data Requests */}
       <Card>
